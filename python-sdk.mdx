@@ -1,0 +1,156 @@
+---
+title: "Python SDK"
+description: "Full reference for the Mengram Python client — zero external dependencies, works everywhere."
+---
+
+## Installation
+
+```bash
+pip install mengram-ai
+```
+
+## Initialize
+
+```python
+from mengram import Mengram
+
+# Pass API key directly
+m = Mengram(api_key="om-your-key")
+
+# Or use environment variable
+# export MENGRAM_API_KEY=om-your-key
+m = Mengram()
+```
+
+## Core methods
+
+### add(messages, ...)
+
+Add memories from a conversation. Automatically extracts entities, facts, episodes, and procedures.
+
+```python
+result = m.add([
+    {"role": "user", "content": "We fixed the OOM with Redis cache"},
+    {"role": "assistant", "content": "Noted the Redis cache fix."},
+])
+# Returns: {"status": "accepted", "job_id": "job-..."}
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `messages` | list[dict] | required | Chat messages with role and content |
+| `user_id` | str | "default" | User identifier for multi-user isolation |
+| `agent_id` | str | None | Agent identifier |
+| `run_id` | str | None | Session/run identifier |
+| `app_id` | str | None | Application identifier |
+| `expiration_date` | str | None | ISO datetime — facts auto-expire |
+
+### add_text(text, ...)
+
+Add memories from plain text instead of chat messages.
+
+```python
+m.add_text("Meeting notes: decided to migrate to PostgreSQL 16")
+```
+
+### search(query, ...)
+
+Semantic search across the knowledge graph.
+
+```python
+results = m.search("database preferences", limit=10)
+for r in results:
+    print(f"{r['entity']} — score: {r['score']:.2f}")
+    for fact in r.get("facts", []):
+        print(f"  - {fact}")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | str | required | Natural language search query |
+| `limit` | int | 5 | Max results |
+| `graph_depth` | int | 2 | Knowledge graph traversal depth |
+| `filters` | dict | None | Metadata filters |
+
+### search_all(query, ...)
+
+Unified search across all 3 memory types.
+
+```python
+results = m.search_all("deployment")
+print(results["semantic"])     # entities
+print(results["episodic"])     # events
+print(results["procedural"])   # workflows
+```
+
+### get_all() / get(name) / delete(name)
+
+```python
+memories = m.get_all()           # list all entities
+entity = m.get("PostgreSQL")     # get specific entity
+m.delete("PostgreSQL")           # delete entity
+```
+
+### get_profile(...)
+
+Generate a Cognitive Profile. See [Cognitive Profile docs](/cognitive-profile).
+
+### episodes(...)
+
+Search or list episodic memories.
+
+```python
+events = m.episodes(query="auth bug", limit=5)
+recent = m.episodes(limit=20)
+jan = m.episodes(after="2026-01-01", before="2026-02-01")
+```
+
+### procedures(...)
+
+Search or list procedural memories.
+
+```python
+procs = m.procedures(query="deploy")
+all_procs = m.procedures(limit=50)
+```
+
+### procedure_feedback(id, ...)
+
+Report success/failure. Triggers experience-driven evolution on failure with context.
+
+```python
+m.procedure_feedback(proc_id, success=True)
+m.procedure_feedback(proc_id, success=False,
+    context="Build OOM", failed_at_step=3)
+```
+
+## Memory management
+
+```python
+m.dedup()                    # find and merge duplicates
+m.merge("src", "target")    # merge two entities
+m.archive_fact("Entity", "old fact")  # archive a fact
+m.run_agents()               # run curator, connector, digest agents
+m.stats()                    # usage statistics
+```
+
+## Webhooks
+
+```python
+m.create_webhook(url="https://example.com/hook",
+    event_types=["memory_add", "memory_update"])
+hooks = m.get_webhooks()
+```
+
+## Import data
+
+```python
+# Import ChatGPT export
+m.import_chatgpt("~/Downloads/chatgpt-export.zip")
+
+# Import Obsidian vault
+m.import_obsidian("~/Documents/MyVault")
+
+# Import text/markdown files
+m.import_files(["notes.md", "journal.txt"])
+```

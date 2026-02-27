@@ -1,0 +1,87 @@
+---
+title: "JavaScript SDK"
+description: "Node.js and browser SDK for Mengram with full TypeScript support."
+---
+
+## Installation
+
+```bash
+npm install mengram-ai
+```
+
+## Quick start
+
+```javascript
+const { MengramClient } = require('mengram-ai');
+const m = new MengramClient('om-your-api-key');
+
+// Add memories
+await m.add([
+    { role: 'user', content: 'Fixed the auth bug using rate limiting.' },
+]);
+
+// Semantic search
+const results = await m.search('auth issues');
+
+// Unified search — all 3 types
+const all = await m.searchAll('deployment issues');
+// { semantic: [...], episodic: [...], procedural: [...] }
+
+// Cognitive Profile
+const profile = await m.getProfile('alice');
+// { system_prompt: "You are talking to Alice..." }
+```
+
+## TypeScript
+
+```typescript
+import { MengramClient, SearchResult, Episode, Procedure } from 'mengram-ai';
+
+const m = new MengramClient('om-...');
+
+const results: SearchResult[] = await m.search('preferences');
+const events: Episode[] = await m.episodes({ query: 'deployment' });
+const procs: Procedure[] = await m.procedures({ query: 'release' });
+```
+
+## All methods
+
+| Method | Description |
+|--------|-------------|
+| `add(messages, options?)` | Add memories (extracts all 3 types) |
+| `addText(text, options?)` | Add from plain text |
+| `search(query, options?)` | Semantic search |
+| `searchAll(query, options?)` | Unified search (all 3 types) |
+| `episodes(options?)` | Search/list episodic memories |
+| `procedures(options?)` | Search/list procedural memories |
+| `procedureFeedback(id, opts)` | Record success/failure |
+| `procedureHistory(id)` | Version history |
+| `getProfile(userId?, opts?)` | Cognitive Profile |
+| `getAll(options?)` | List all memories |
+| `get(name)` | Get specific entity |
+| `delete(name)` | Delete entity |
+| `runAgents(options?)` | Run memory agents |
+
+## Multi-user isolation
+
+```javascript
+// Each userId gets its own memory space
+await m.add([{ role: 'user', content: 'I prefer dark mode' }], { userId: 'alice' });
+await m.add([{ role: 'user', content: 'I prefer light mode' }], { userId: 'bob' });
+
+const alice = await m.searchAll('preferences', { userId: 'alice' });
+// Only Alice's memories
+```
+
+## Import data
+
+```javascript
+// ChatGPT export (requires jszip)
+await m.importChatgpt('~/Downloads/chatgpt-export.zip');
+
+// Obsidian vault
+await m.importObsidian('~/Documents/MyVault');
+
+// Text/markdown files
+await m.importFiles(['notes.md', 'journal.txt']);
+```

@@ -1,0 +1,81 @@
+---
+title: "Memory Types"
+description: "Understand semantic, episodic, and procedural memory — the three pillars of human-like AI memory."
+---
+
+## Overview
+
+Mengram gives your AI three distinct memory types, inspired by how human memory works:
+
+| Type | Stores | Example |
+|------|--------|---------|
+| **Semantic** | Facts, knowledge, preferences | "User prefers dark mode and uses Python 3.12" |
+| **Episodic** | Events, experiences, interactions | "Fixed an OOM bug on Jan 15 by reducing pool size" |
+| **Procedural** | Workflows, processes, skills | "How to deploy: 1) run tests, 2) build, 3) push to main" |
+
+When you call `m.add(messages)`, all three types are extracted automatically from the conversation.
+
+## Semantic Memory
+
+The knowledge graph. Entities with facts, types, and relationships. This is the core memory layer.
+
+```python
+# Search semantic memory
+results = m.search("user preferences")
+# Returns entities with facts and scores
+
+# Get a specific entity
+entity = m.get("PostgreSQL")
+# {"name": "PostgreSQL", "type": "technology", "facts": [...]}
+```
+
+## Episodic Memory
+
+Autobiographical events — what happened, when, with whom, and what the outcome was. Each episode has a summary, context, outcome, and participant list.
+
+```python
+# Search episodes
+events = m.episodes(query="deployment issues")
+# [{"summary": "Fixed OOM on Railway", "outcome": "Resolved by reducing pool", ...}]
+
+# List recent episodes
+recent = m.episodes(limit=10)
+
+# Time-range filter
+jan_events = m.episodes(after="2026-01-01", before="2026-02-01")
+```
+
+## Procedural Memory
+
+Learned workflows and processes. Mengram extracts step-by-step procedures from conversations and tracks which ones work and which fail.
+
+```python
+# Search procedures
+procs = m.procedures(query="deploy")
+# [{"name": "Deploy to Railway", "steps": [...], "success_count": 5}]
+
+# Report success/failure — triggers experience-driven evolution
+m.procedure_feedback(proc_id, success=True)
+
+# On failure with context, the procedure evolves automatically
+m.procedure_feedback(proc_id, success=False,
+    context="Step 3 failed: OOM on build",
+    failed_at_step=3)
+
+# View how a procedure evolved over time
+history = m.procedure_history(proc_id)
+# {"versions": [v1, v2, v3], "evolution_log": [...]}
+```
+
+## Unified Search
+
+Search all three types at once with a single call:
+
+```python
+results = m.search_all("deployment problems")
+# {
+#     "semantic": [...],    # knowledge graph entities
+#     "episodic": [...],    # related events
+#     "procedural": [...]   # relevant workflows
+# }
+```

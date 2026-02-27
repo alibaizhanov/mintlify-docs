@@ -1,0 +1,103 @@
+---
+title: "Self-hosting"
+description: "Run Mengram on your own infrastructure with Docker Compose — PostgreSQL, Redis, and Mengram API in one command."
+---
+
+## Prerequisites
+
+- Docker and Docker Compose
+- An OpenAI API key (or compatible LLM provider)
+
+## Quick start
+
+```bash
+git clone https://github.com/alibaizhanov/mengram.git
+cd mengram
+
+# Set your OpenAI API key
+export OPENAI_API_KEY=sk-your-key
+
+# Start everything
+docker compose up -d
+```
+
+This starts three services:
+- **PostgreSQL 16** on port 5432
+- **Redis 7** on port 6379
+- **Mengram API** on port 8420
+
+## Verify it's running
+
+```bash
+curl http://localhost:8420/health
+# {"status": "ok"}
+```
+
+## Configuration
+
+Environment variables in `docker-compose.yml`:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `postgresql://mengram:mengram@postgres:5432/mengram` | PostgreSQL connection string |
+| `REDIS_URL` | `redis://redis:6379` | Redis connection string |
+| `OPENAI_API_KEY` | required | OpenAI API key for embeddings and LLM |
+| `LLM_PROVIDER` | `openai` | LLM provider (`openai`, `anthropic`, `ollama`) |
+| `LLM_MODEL` | `gpt-4o-mini` | Model for memory extraction |
+
+## Use with Ollama (fully local)
+
+Run Mengram with a local LLM — no external API calls:
+
+```yaml
+environment:
+  LLM_PROVIDER: ollama
+  LLM_MODEL: llama3.2
+  OLLAMA_HOST: http://host.docker.internal:11434
+```
+
+Make sure Ollama is running on your host machine with the model pulled:
+
+```bash
+ollama pull llama3.2
+```
+
+## Use with LM Studio
+
+```yaml
+environment:
+  LLM_PROVIDER: openai
+  LLM_MODEL: your-model-name
+  OPENAI_API_KEY: lm-studio
+  OPENAI_API_BASE: http://host.docker.internal:1234/v1
+```
+
+## Data persistence
+
+PostgreSQL data is stored in a Docker volume (`pgdata`). Your memories persist across container restarts.
+
+To backup:
+
+```bash
+docker compose exec postgres pg_dump -U mengram mengram > backup.sql
+```
+
+To restore:
+
+```bash
+docker compose exec -T postgres psql -U mengram mengram < backup.sql
+```
+
+## Production deployment
+
+For production, consider:
+
+- Use a managed PostgreSQL (e.g., Supabase, Neon, RDS)
+- Use a managed Redis (e.g., Upstash, ElastiCache)
+- Set strong database passwords
+- Put behind a reverse proxy with TLS (nginx, Caddy)
+- Set `GUNICORN_WORKERS` for concurrency
+
+<Tip>
+The easiest way to deploy is [Railway](https://railway.app) — just connect your GitHub repo and set environment variables. Mengram's cloud version runs on Railway.
+</Tip>

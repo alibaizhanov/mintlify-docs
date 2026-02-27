@@ -1,0 +1,72 @@
+---
+title: "n8n Integration"
+description: "Add persistent memory to any n8n AI agent workflow with a ready-to-import template."
+---
+
+## Overview
+
+Add long-term memory to any n8n AI workflow. Your agent remembers users across sessions — preferences, past conversations, resolved issues. No custom code needed, just HTTP Request nodes.
+
+## Quick start
+
+1. [Download the workflow](https://github.com/alibaizhanov/mengram/tree/main/examples/n8n) from GitHub
+2. In n8n, go to **Workflows → Import from File**
+3. Add your Mengram API key as a Header Auth credential
+4. Activate and test
+
+## How it works
+
+```
+Webhook → Search Memories → Build Prompt → AI Response → Save to Memory → Respond
+```
+
+The workflow adds 3 HTTP Request nodes to any AI agent:
+
+1. **Search memories** — POST to `/v1/search` with the user's message to find relevant past context
+2. **AI Agent responds** — system prompt includes retrieved memories, agent responds with full context
+3. **Save new memories** — POST to `/v1/add` to store the conversation. Mengram auto-extracts facts and deduplicates
+
+## Credential setup
+
+Create a **Header Auth** credential in n8n:
+
+```
+Name: Mengram API Key
+Header Name: Authorization
+Header Value: Bearer om-your-api-key
+```
+
+## API endpoints used
+
+| Node | Method | URL | Body |
+|------|--------|-----|------|
+| Search Memories | POST | `https://mengram.io/v1/search` | `{"query": "...", "user_id": "...", "limit": 5}` |
+| Save to Memory | POST | `https://mengram.io/v1/add` | `{"messages": [...], "user_id": "..."}` |
+
+## Swap the LLM
+
+The workflow uses OpenAI `gpt-4o-mini` by default. To use a different LLM, change the URL and body in the AI Response node:
+
+- **Anthropic**: `https://api.anthropic.com/v1/messages`
+- **Ollama** (local): `http://localhost:11434/api/chat`
+- **Any OpenAI-compatible API**: just change the URL and model name
+
+## Example
+
+```bash
+curl -X POST http://localhost:5678/webhook/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "I prefer Python and use Railway for hosting", "user_id": "user-123"}'
+
+# Later...
+curl -X POST http://localhost:5678/webhook/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "What hosting should I deploy to?", "user_id": "user-123"}'
+
+# Agent remembers Railway preference and responds accordingly
+```
+
+## Links
+
+- [Workflow on GitHub](https://github.com/alibaizhanov/mengram/tree/main/examples/n8n)
+- [API Reference](/api-reference)

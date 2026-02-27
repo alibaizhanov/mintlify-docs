@@ -1,0 +1,70 @@
+---
+title: "Webhooks"
+description: "Real-time notifications when memories are created, updated, or deleted."
+---
+
+## Overview
+
+Webhooks send HTTP POST requests to your server when memory events occur. Use them to sync memories with your app, trigger workflows, or build real-time features.
+
+## Create a webhook
+
+```python
+hook = m.create_webhook(
+    url="https://your-app.com/webhooks/mengram",
+    name="Production webhook",
+    event_types=["memory_add", "memory_update", "memory_delete"],
+    secret="your-hmac-secret",  # optional, for signature verification
+)
+print(hook)  # {"id": 1, "url": "...", "active": true}
+```
+
+## Event types
+
+| Event | Description |
+|-------|-------------|
+| `memory_add` | New entity or facts added |
+| `memory_update` | Entity facts updated |
+| `memory_delete` | Entity deleted |
+
+## Webhook payload
+
+```json
+{
+  "event": "memory_add",
+  "timestamp": "2026-02-27T10:30:00Z",
+  "data": {
+    "entity": "PostgreSQL",
+    "type": "technology",
+    "facts": ["Uses PostgreSQL 16", "Deployed on Railway"],
+    "user_id": "default"
+  }
+}
+```
+
+## Signature verification
+
+If you provided a `secret`, each request includes an `X-Mengram-Signature` header with an HMAC-SHA256 signature of the request body.
+
+```python
+import hmac, hashlib
+
+def verify_webhook(body: bytes, signature: str, secret: str) -> bool:
+    expected = hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(f"sha256={expected}", signature)
+```
+
+## Manage webhooks
+
+```python
+# List all
+hooks = m.get_webhooks()
+
+# Update
+m.update_webhook(webhook_id=1, active=False)
+
+# Delete
+m.delete_webhook(webhook_id=1)
+```

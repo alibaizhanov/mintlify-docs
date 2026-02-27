@@ -1,0 +1,65 @@
+---
+title: "Cognitive Profile"
+description: "Generate a ready-to-use system prompt from memory that captures who a user is, their preferences, and current focus."
+---
+
+## What is a Cognitive Profile?
+
+A Cognitive Profile is an AI-generated system prompt that summarizes everything Mengram knows about a user: identity, preferences, communication style, current projects, and key relationships. Insert it into any LLM's system prompt for instant personalization.
+
+## Generate a profile
+
+```python
+from mengram import Mengram
+
+m = Mengram()
+profile = m.get_profile()
+
+print(profile["system_prompt"])
+# "You are talking to Ali, a software engineer based in ...
+#  He prefers concise responses, uses Python and Railway..."
+
+print(profile["facts_used"])  # 47 — number of facts used
+```
+
+## Use in an LLM call
+
+```python
+import openai
+
+profile = m.get_profile(user_id="alice")
+
+response = openai.chat.completions.create(
+    model="gpt-4o",
+    messages=[
+        {"role": "system", "content": profile["system_prompt"]},
+        {"role": "user", "content": "What should I focus on this week?"},
+    ]
+)
+```
+
+## Force regeneration
+
+Profiles are cached for performance. Force a fresh one with:
+
+```python
+profile = m.get_profile(force=True)
+```
+
+## Multi-user profiles
+
+Generate profiles for different end-users in your app:
+
+```python
+alice_profile = m.get_profile(user_id="alice")
+bob_profile = m.get_profile(user_id="bob")
+```
+
+## LangChain integration
+
+```python
+from langchain_mengram import get_mengram_profile
+
+# Returns a string you can use as system prompt
+prompt = get_mengram_profile(api_key="om-...", user_id="alice")
+```

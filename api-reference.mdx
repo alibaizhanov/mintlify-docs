@@ -1,0 +1,151 @@
+---
+title: "API Reference"
+description: "Complete REST API documentation for Mengram with all endpoints, parameters, and response formats."
+---
+
+## Base URL
+
+```
+https://mengram.io
+```
+
+## Authentication
+
+All requests require a Bearer token in the Authorization header:
+
+```
+Authorization: Bearer om-your-api-key
+```
+
+## Core endpoints
+
+### POST /v1/add
+
+Add memories from a conversation.
+
+```bash
+curl -X POST https://mengram.io/v1/add \
+  -H "Authorization: Bearer om-..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "I use Python and Railway"},
+      {"role": "assistant", "content": "Noted."}
+    ],
+    "user_id": "default"
+  }'
+```
+
+Response: `{"status": "accepted", "job_id": "job-..."}`
+
+### POST /v1/add_text
+
+Add memories from plain text.
+
+```json
+{"text": "Meeting notes: migrating to PostgreSQL 16", "user_id": "default"}
+```
+
+### POST /v1/search
+
+Semantic search across the knowledge graph.
+
+```json
+{"query": "database preferences", "user_id": "default", "limit": 5, "graph_depth": 2}
+```
+
+### POST /v1/search/all
+
+Unified search across all 3 memory types.
+
+```json
+{"query": "deployment", "user_id": "default", "limit": 5}
+```
+
+Response: `{"semantic": [...], "episodic": [...], "procedural": [...]}`
+
+### GET /v1/memories
+
+List all entities for a user.
+
+### GET /v1/memory/:name
+
+Get details for a specific entity.
+
+### DELETE /v1/memory/:name
+
+Delete an entity.
+
+## Cognitive Profile
+
+### GET /v1/profile
+
+Generate a Cognitive Profile system prompt.
+
+Query params: `force=true` to regenerate, `sub_user_id` for multi-user.
+
+## Episodic Memory
+
+### GET /v1/episodes
+
+List recent episodes. Params: `limit`, `after`, `before`.
+
+### GET /v1/episodes/search
+
+Search episodes. Params: `query`, `limit`, `after`, `before`.
+
+## Procedural Memory
+
+### GET /v1/procedures
+
+List procedures. Params: `limit`.
+
+### GET /v1/procedures/search
+
+Search procedures. Params: `query`, `limit`.
+
+### PATCH /v1/procedures/:id/feedback
+
+Record success/failure. Params: `success=true|false`. Body: `{"context": "...", "failed_at_step": 3}`
+
+### GET /v1/procedures/:id/history
+
+Get version history for a procedure.
+
+## Memory Management
+
+### POST /v1/dedup
+
+Find and merge duplicate entities.
+
+### POST /v1/merge
+
+Merge two entities. Params: `source`, `target`.
+
+### POST /v1/archive_fact
+
+Archive a specific fact. Body: `{"entity_name": "...", "fact_content": "..."}`
+
+### POST /v1/agents/run
+
+Run memory agents. Params: `agent=all|curator|connector|digest`, `auto_fix=true|false`.
+
+## Jobs
+
+### GET /v1/jobs/:id
+
+Check status of a background job. Response: `{"status": "completed|processing|failed", ...}`
+
+## Webhooks
+
+### POST /v1/webhooks
+
+Create a webhook. Body: `{"url": "...", "event_types": ["memory_add"]}`
+
+### GET /v1/webhooks
+
+List all webhooks.
+
+<Tip>
+For interactive API docs, see [Swagger UI](https://mengram.io/swagger) or [ReDoc](https://mengram.io/redoc).
+</Tip>

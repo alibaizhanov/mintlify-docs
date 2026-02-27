@@ -1,0 +1,74 @@
+---
+title: "LangChain"
+description: "Use MengramRetriever in LangChain RAG pipelines and chains for persistent memory."
+---
+
+## Installation
+
+```bash
+pip install langchain-mengram
+```
+
+## MengramRetriever
+
+Subclasses `BaseRetriever` from LangChain. Searches across all 3 memory types and returns `Document` objects.
+
+```python
+from langchain_mengram import MengramRetriever
+
+retriever = MengramRetriever(
+    api_key="om-your-key",
+    user_id="alice",
+    top_k=5,
+    memory_types=["semantic", "episodic", "procedural"],
+)
+
+# Use as any LangChain retriever
+docs = retriever.invoke("deployment issues")
+for doc in docs:
+    print(doc.page_content)
+    print(doc.metadata)  # {"source": "mengram", "memory_type": "semantic", ...}
+```
+
+## Use in a chain
+
+```python
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+
+retriever = MengramRetriever(api_key="om-...")
+
+prompt = ChatPromptTemplate.from_template(
+    "Context from memory:\n{context}\n\nQuestion: {question}"
+)
+
+chain = (
+    {"context": retriever, "question": RunnablePassthrough()}
+    | prompt
+    | ChatOpenAI(model="gpt-4o")
+    | StrOutputParser()
+)
+
+answer = chain.invoke("What deployment stack am I using?")
+```
+
+## Cognitive Profile
+
+```python
+from langchain_mengram import get_mengram_profile
+
+# Get a system prompt string
+prompt = get_mengram_profile(api_key="om-...", user_id="alice")
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `api_key` | str | required | Mengram API key |
+| `user_id` | str | "default" | User to search |
+| `api_url` | str | "https://mengram.io" | API base URL |
+| `top_k` | int | 5 | Max results per type |
+| `memory_types` | list | all 3 | Which types to search |

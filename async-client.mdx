@@ -1,0 +1,83 @@
+---
+title: "Async Client"
+description: "Non-blocking Python client built on httpx for async/await workflows."
+---
+
+## Installation
+
+```bash
+pip install mengram-ai[async]
+```
+
+This installs `httpx` for non-blocking HTTP.
+
+## Initialize
+
+```python
+from mengram import AsyncMengram
+
+m = AsyncMengram(api_key="om-your-key")
+
+# Or use environment variable
+m = AsyncMengram()
+```
+
+## Context manager
+
+```python
+async with AsyncMengram() as m:
+    results = await m.search("deployment")
+    profile = await m.get_profile()
+# Client automatically closed
+```
+
+## All methods are async
+
+Every method from the sync client has an async equivalent:
+
+```python
+import asyncio
+from mengram import AsyncMengram
+
+async def main():
+    m = AsyncMengram()
+
+    # Add memories
+    result = await m.add([
+        {"role": "user", "content": "Deployed on Railway with PostgreSQL"},
+    ])
+
+    # Search
+    results = await m.search("deployment")
+
+    # Unified search
+    all_results = await m.search_all("issues")
+
+    # Profile
+    profile = await m.get_profile()
+
+    # Episodes & procedures
+    events = await m.episodes(query="deployment")
+    procs = await m.procedures(query="deploy")
+
+    # Close when done
+    await m.close()
+
+asyncio.run(main())
+```
+
+## API parity
+
+The async client has the same methods as the sync client. Just add `await` before each call.
+
+| Sync | Async |
+|------|-------|
+| `m.add(msgs)` | `await m.add(msgs)` |
+| `m.search(q)` | `await m.search(q)` |
+| `m.search_all(q)` | `await m.search_all(q)` |
+| `m.get_profile()` | `await m.get_profile()` |
+| `m.episodes()` | `await m.episodes()` |
+
+## Retry & error handling
+
+The async client automatically retries on transient errors (429, 502, 503, 504) and network failures, with exponential backoff up to 3 attempts.

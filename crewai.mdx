@@ -1,0 +1,55 @@
+---
+title: "CrewAI"
+description: "Give your CrewAI agents persistent memory with procedural learning."
+---
+
+## Installation
+
+```bash
+pip install mengram-ai[crewai]
+```
+
+## Quick start
+
+```python
+from integrations.crewai import create_mengram_tools  # included in mengram-ai
+from crewai import Agent, Task, Crew
+
+# Create memory tools
+tools = create_mengram_tools(api_key="om-your-key")
+
+agent = Agent(
+    role="Support Engineer",
+    goal="Help users with technical issues using past context",
+    tools=tools,
+)
+
+task = Task(
+    description="Help the user debug their deployment issue",
+    agent=agent,
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff()
+```
+
+## Available tools
+
+| Tool | Description |
+|------|-------------|
+| `mengram_search` | Search all 3 memory types (semantic, episodic, procedural) |
+| `mengram_remember` | Save information to memory (auto-extracts all 3 types) |
+| `mengram_profile` | Get full user context via Cognitive Profile |
+| `mengram_save_workflow` | Save a completed workflow as a procedure |
+| `mengram_workflow_feedback` | Report success/failure of a workflow |
+
+## Procedural learning
+
+When a CrewAI agent completes a multi-step task, Mengram automatically saves it as a procedure. Next time a similar task comes up, the agent already knows the optimal path — with success/failure tracking.
+
+```python
+# Agent workflow is automatically extracted as a procedure
+# On next similar task, the agent retrieves the procedure
+results = tools[0].run("how to deploy to Railway")
+# Returns the learned procedure with steps
+```

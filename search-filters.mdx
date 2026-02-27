@@ -1,0 +1,87 @@
+---
+title: "Search & Filters"
+description: "Semantic search, metadata filters, graph traversal depth, and unified search across all memory types."
+---
+
+## Basic search
+
+```python
+results = m.search("deployment stack")
+# Returns top 5 entities by relevance
+```
+
+## Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | str | required | Natural language search query |
+| `limit` | int | 5 | Maximum results to return |
+| `graph_depth` | int | 2 | How many hops to traverse in the knowledge graph |
+| `user_id` | str | "default" | User whose memories to search |
+| `filters` | dict | None | Metadata key-value filters |
+
+## Metadata filters
+
+Filter search results by metadata stored on entities. Uses PostgreSQL JSONB containment (`@>`) for fast filtering with GIN indexes.
+
+```python
+# Filter by agent
+results = m.search("config", filters={"agent_id": "support-bot"})
+
+# Filter by app
+results = m.search("preferences", filters={"app_id": "prod"})
+
+# Multiple filters (AND logic)
+results = m.search("issues", filters={
+    "agent_id": "support-bot",
+    "app_id": "production",
+})
+
+# Also works with shorthand parameters
+results = m.search("config", agent_id="support-bot", app_id="prod")
+```
+
+## Graph depth
+
+Controls how many relationship hops the search traverses. Higher values find more related context but take longer.
+
+```python
+# Shallow — just direct matches
+results = m.search("Python", graph_depth=0)
+
+# Default — 2 hops (entity → related → related)
+results = m.search("Python", graph_depth=2)
+
+# Deep — traverse far connections
+results = m.search("Python", graph_depth=4)
+```
+
+## Unified search
+
+Search all 3 memory types in a single call:
+
+```python
+results = m.search_all("deployment problems")
+
+# Semantic — knowledge graph entities with facts
+for entity in results["semantic"]:
+    print(entity["entity"], entity["facts"])
+
+# Episodic — events and experiences
+for event in results["episodic"]:
+    print(event["summary"], event["outcome"])
+
+# Procedural — workflows and processes
+for proc in results["procedural"]:
+    print(proc["name"], proc["steps"])
+```
+
+## Timeline search
+
+Search facts by time range:
+
+```python
+facts = m.timeline(after="2026-01-01", before="2026-02-01")
+for f in facts:
+    print(f["created_at"], f["entity"], f["fact"])
+```
