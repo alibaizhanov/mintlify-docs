@@ -42,7 +42,7 @@
               "langchain",
               "crewai",
               "n8n",
-              "mcp"
+              "mcp-server"
             ]
           },
           {
