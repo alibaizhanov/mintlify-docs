@@ -1,0 +1,129 @@
+---
+title: "Claude Code Auto-Save"
+description: "Automatically capture conversations from Claude Code into Mengram using hooks — zero manual effort."
+---
+
+## Overview
+
+Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) hooks to automatically save conversations to your memory vault. Every Nth response, Mengram captures the user message and assistant response, extracts entities, facts, episodes, and procedures — all in the background.
+
+## Quick Setup
+
+```bash
+pip install mengram-ai
+export MENGRAM_API_KEY=om-your-key
+mengram hook install
+```
+
+That's it. Restart Claude Code and your conversations start saving automatically.
+
+## How It Works
+
+1. Claude Code fires a `Stop` hook after each assistant response
+2. Mengram reads the last user message and assistant response
+3. Every Nth response (default: 3), it sends the pair to the Mengram API
+4. The API extracts entities, facts, episodes, and procedures in the background
+5. Your memories build up automatically over time
+
+The hook runs asynchronously — it never blocks or slows down Claude Code.
+
+## Commands
+
+### mengram hook install
+
+Install the auto-save hook into Claude Code settings.
+
+```bash
+mengram hook install                    # default: every 3rd response
+mengram hook install --every 5          # every 5th response
+mengram hook install --user-id myuser   # custom user_id
+```
+
+This adds a `Stop` hook to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-save --every 3",
+          "timeout": 30,
+          "async": true
+        }]
+      }
+    ]
+  }
+}
+```
+
+### mengram hook status
+
+Check if the hook is installed and working.
+
+```bash
+mengram hook status
+```
+
+Output:
+
+```
+Mengram Auto-Save Hook
+
+  Hook:     installed (every 3 responses)
+  API Key:  om-...Kb8 (set)
+  API:      connected (free plan)
+  Settings: /Users/you/.claude/settings.json
+```
+
+### mengram hook uninstall
+
+Remove the hook and clean up.
+
+```bash
+mengram hook uninstall
+```
+
+## Configuration
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--every N` | 3 | Save every Nth response. Lower = more memories, higher = less noise |
+| `--user-id` | `"default"` | Mengram user_id for multi-user isolation |
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MENGRAM_API_KEY` | Yes | Your Mengram API key (starts with `om-`) |
+| `MENGRAM_URL` | No | Custom API URL (default: `https://mengram.io`) |
+| `MENGRAM_USER_ID` | No | Default user_id (overridden by `--user-id`) |
+
+## Filtering
+
+The hook automatically skips:
+
+- Short responses (< 100 characters) — trivial confirmations
+- Interrupted requests
+- Responses when no API key is set
+
+## Troubleshooting
+
+**Hook not firing?**
+- Restart Claude Code after installing
+- Check `mengram hook status` to verify installation
+- Make sure `MENGRAM_API_KEY` is set in your shell profile (`.zshrc` / `.bashrc`)
+
+**Memories not appearing?**
+- Memories are processed in the background — check after ~30 seconds
+- Verify API connectivity: `mengram hook status`
+- Check your memories at [mengram.io/dashboard](https://mengram.io/dashboard)
+
+<Tip>
+Set `MENGRAM_API_KEY` in your shell profile so it persists across sessions:
+
+```bash
+echo 'export MENGRAM_API_KEY=om-your-key' >> ~/.zshrc
+```
+</Tip>

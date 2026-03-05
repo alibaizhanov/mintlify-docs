@@ -1,11 +1,11 @@
 ---
 title: "MCP Server"
-description: "Use Mengram as a Model Context Protocol server with Claude Desktop, Cursor, and other MCP clients."
+description: "Use Mengram as a Model Context Protocol server with Claude Desktop, Cursor, Windsurf, and other MCP clients."
 ---
 
 ## What is MCP?
 
-Model Context Protocol (MCP) lets AI clients like Claude Desktop and Cursor connect to external tools. Mengram's MCP server gives these clients persistent memory.
+Model Context Protocol (MCP) lets AI clients like Claude Desktop, Cursor, and Windsurf connect to external tools. Mengram's MCP server gives these clients persistent memory — semantic, episodic, and procedural.
 
 ## Setup with Claude Desktop
 
@@ -27,7 +27,7 @@ Add to your Claude Desktop config (`claude_desktop_config.json`):
 
 ## Setup with Cursor
 
-Add to Cursor's MCP settings:
+Add to Cursor's MCP settings (`.cursor/mcp.json`):
 
 ```json
 {
@@ -43,39 +43,106 @@ Add to Cursor's MCP settings:
 }
 ```
 
-## Available tools
+## Setup with Windsurf
 
-The MCP server exposes 21 tools:
+Add to Windsurf's MCP settings:
+
+```json
+{
+  "mcpServers": {
+    "mengram": {
+      "command": "uvx",
+      "args": ["mengram-ai"],
+      "env": {
+        "MENGRAM_API_KEY": "om-your-key"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+The cloud MCP server exposes **29 tools**:
+
+### Memory Operations
 
 | Tool | Description |
 |------|-------------|
-| `remember` | Save knowledge from conversation to memory |
-| `remember_text` | Save knowledge from plain text |
-| `recall` | Semantic search through memory |
-| `search` | Structured search with scores and facts |
-| `search_all` | Unified search across all 3 memory types |
-| `timeline` | Search memory by time range |
-| `vault_stats` | Memory statistics |
-| `run_agents` | Run memory agents (curator, connector, digest) |
-| `get_insights` | AI-generated insights and patterns |
-| `list_procedures` | List learned workflows/procedures |
-| `procedure_feedback` | Record success/failure for a procedure |
-| `procedure_history` | Version history of a procedure |
-| `get_entity` | Get details of a specific entity |
-| `delete_entity` | Delete an entity and all its data |
-| `list_episodes` | List or search episodic memories |
-| `get_graph` | Get the knowledge graph |
-| `get_triggers` | List smart triggers and reminders |
-| `get_feed` | Activity feed — recent memory changes |
-| `archive_fact` | Archive a specific fact on an entity |
-| `merge_entities` | Merge two entities into one |
-| `reflect` | Trigger AI reflection on memories |
+| `remember` | Save knowledge from a conversation to memory — pass message pairs and the AI extracts entities, facts, relations, episodes, and procedures. |
+| `remember_text` | Save plain text to memory — the AI extracts entities, facts, and relations automatically. |
+| `recall` | Semantic search through cloud memory. Use specific keywords: person names, project names, technologies. |
+| `search` | Advanced structured search — returns entities with relevance scores, facts, and knowledge snippets. |
+| `search_all` | Unified search across ALL memory types — semantic, episodic, and procedural. |
+| `timeline` | Search memory by time. Use when user asks "what did I do last week", "when did I...", etc. Returns facts with timestamps. |
+| `list_memories` | List all stored memory entities with their types and fact counts. |
 
-## HTTP transport
+### Entity Management
+
+| Tool | Description |
+|------|-------------|
+| `get_entity` | Get details of a specific entity — facts, relations, knowledge. |
+| `delete_entity` | Delete an entity and all its data (facts, relations, knowledge). |
+| `fix_entity_type` | Fix an entity's type classification (e.g. a technology labeled as "person"). Valid types: person, project, technology, company, concept, unknown. |
+| `merge_entities` | Merge two entities into one — combines facts, relations, and knowledge. |
+| `archive_fact` | Archive a specific fact on an entity — soft-delete without removing the entity. |
+| `dedup` | Find and automatically merge duplicate entities. Scans all entities and merges near-duplicates. |
+
+### Episodic Memory
+
+| Tool | Description |
+|------|-------------|
+| `list_episodes` | List or search episodic memories (events, interactions, experiences). |
+
+### Procedural Memory
+
+| Tool | Description |
+|------|-------------|
+| `list_procedures` | List learned workflows/procedures from memory. Returns procedures with steps, success/fail counts, and version info. |
+| `procedure_feedback` | Record success or failure for a procedure. On failure with context, the system automatically evolves the procedure. |
+| `procedure_history` | Show how a procedure evolved over time — all versions and what changed. |
+
+### Insights & Reflection
+
+| Tool | Description |
+|------|-------------|
+| `reflect` | Trigger AI reflection on memories — analyzes facts to find patterns, insights, and connections. |
+| `get_reflections` | Get AI-generated reflections (insights and patterns found across memories). Optional scope filter: "entity", "cross", "temporal". |
+| `get_insights` | AI-generated insights about the user — patterns, connections, reflections from memory analysis. |
+
+### Agents
+
+| Tool | Description |
+|------|-------------|
+| `run_agents` | Run memory agents that analyze, clean, and find patterns. Use "curator", "connector", "digest", or "all". |
+| `vault_stats` | Get memory vault statistics — total entities, facts, relations, knowledge items, and storage usage. |
+
+### Triggers & Graph
+
+| Tool | Description |
+|------|-------------|
+| `get_triggers` | List smart triggers — reminders, contradictions detected, and patterns. |
+| `dismiss_trigger` | Dismiss a smart trigger without firing its webhook. |
+| `get_graph` | Get the knowledge graph — all entities and their relationships. |
+| `get_feed` | Activity feed — recent memory changes and events. |
+
+### Context & Rules
+
+| Tool | Description |
+|------|-------------|
+| `checkpoint` | Save a session checkpoint — summarize key decisions, learnings, and outcomes. Lighter than "remember": takes a structured summary instead of raw messages. |
+| `context_for` | Get relevant memory context for a specific task. Returns a compact context pack: related entities, procedures, and past events. |
+| `generate_rules_file` | Generate a CLAUDE.md, .cursorrules, or .windsurfrules file from memory. Creates structured project rules, conventions, tech stack, workflows. |
+
+## HTTP Transport
 
 For remote/cloud MCP clients, Mengram also supports SSE transport:
 
 ```
 SSE endpoint: https://mengram.io/mcp/sse
-Messages: https://mengram.io/mcp/messages/
+Messages:     https://mengram.io/mcp/messages/
 ```
+
+<Tip>
+The MCP server uses cloud mode by default with `MENGRAM_API_KEY`. For local mode (your own LLM keys), run `mengram server` without the `--cloud` flag.
+</Tip>

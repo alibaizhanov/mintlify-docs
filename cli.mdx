@@ -1,0 +1,140 @@
+---
+title: "CLI Reference"
+description: "Command-line interface for Mengram — setup, MCP server, data import, hooks, and rules generation."
+---
+
+## Installation
+
+```bash
+pip install mengram-ai
+```
+
+## Commands
+
+### mengram init
+
+Interactive setup — creates config, vault, and Claude Desktop MCP integration.
+
+```bash
+mengram init
+mengram init --provider openai --api-key sk-...
+mengram init --mcp-only   # only setup MCP integration
+```
+
+| Flag | Description |
+|------|-------------|
+| `--provider` | LLM provider: `openai`, `anthropic`, `ollama` |
+| `--api-key` | API key for the provider |
+| `--vault` | Custom vault path |
+| `--home` | Mengram home directory (default: `~/.mengram`) |
+| `--no-mcp` | Skip Claude Desktop MCP setup |
+| `--mcp-only` | Only setup MCP (config must exist) |
+
+### mengram server
+
+Start the MCP server for Claude Desktop, Cursor, or Windsurf.
+
+```bash
+mengram server              # local mode (your own LLM keys)
+mengram server --cloud      # cloud mode (uses Mengram API)
+```
+
+| Flag | Description |
+|------|-------------|
+| `--config` | Config path (default: `~/.mengram/config.yaml`) |
+| `--cloud` | Use cloud API instead of local vault |
+
+### mengram status
+
+Check setup status — config, vault, vector index, Claude Desktop integration.
+
+```bash
+mengram status
+```
+
+### mengram stats
+
+Show vault statistics — entity counts, fact counts, vector index info.
+
+```bash
+mengram stats
+```
+
+### mengram rules
+
+Generate a CLAUDE.md, .cursorrules, or .windsurfrules file from your cloud memory.
+
+```bash
+mengram rules                          # default: CLAUDE.md format
+mengram rules --format cursorrules     # Cursor format
+mengram rules --format windsurf        # Windsurf format
+mengram rules --force                  # regenerate (bypass cache)
+```
+
+| Flag | Description |
+|------|-------------|
+| `--format` | Output format: `claude_md`, `cursorrules`, `windsurf` |
+| `--force` | Regenerate (bypass cache) |
+
+### mengram hook
+
+Manage Claude Code auto-save hook. See [Claude Code Auto-Save](/claude-code) for details.
+
+```bash
+mengram hook install              # install auto-save hook
+mengram hook install --every 5    # save every 5th response
+mengram hook status               # check hook status
+mengram hook uninstall            # remove hook
+```
+
+### mengram import
+
+Import existing data into memory.
+
+#### mengram import chatgpt
+
+```bash
+mengram import chatgpt ~/Downloads/chatgpt-export.zip
+mengram import chatgpt export.zip --cloud   # use cloud API
+```
+
+#### mengram import obsidian
+
+```bash
+mengram import obsidian ~/Documents/MyVault
+mengram import obsidian vault/ --cloud --chunk-chars 4000
+```
+
+#### mengram import files
+
+```bash
+mengram import files notes.md journal.txt research.md
+mengram import files *.md --cloud
+```
+
+### mengram api
+
+Start a local REST API server.
+
+```bash
+mengram api                    # default: 0.0.0.0:8420
+mengram api --port 9000        # custom port
+```
+
+### mengram web
+
+Start the Web UI with chat and knowledge graph visualization.
+
+```bash
+mengram web                    # opens browser automatically
+mengram web --port 9000        # custom port
+mengram web --no-open          # don't open browser
+```
+
+## Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `MENGRAM_API_KEY` | Cloud API key (starts with `om-`) |
+| `MENGRAM_URL` | Custom API base URL |
+| `MENGRAM_USER_ID` | Default user_id |

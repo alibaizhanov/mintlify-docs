@@ -22,7 +22,7 @@ m = AsyncMengram(api_key="om-your-key")
 m = AsyncMengram()
 ```
 
-## Context manager
+## Context Manager
 
 ```python
 async with AsyncMengram() as m:
@@ -31,9 +31,9 @@ async with AsyncMengram() as m:
 # Client automatically closed
 ```
 
-## All methods are async
+## All Methods
 
-Every method from the sync client has an async equivalent:
+Every method is async and must be `await`-ed:
 
 ```python
 import asyncio
@@ -60,24 +60,70 @@ async def main():
     events = await m.episodes(query="deployment")
     procs = await m.procedures(query="deploy")
 
+    # Feedback
+    await m.procedure_feedback(proc_id, success=True)
+
+    # Graph & timeline
+    graph = await m.graph()
+    facts = await m.timeline(after="2026-01-01")
+
+    # Agents & insights
+    await m.run_agents()
+    await m.reflect()
+    insights = await m.insights()
+
+    # Memory management
+    await m.dedup()
+    await m.merge("source", "target")
+    await m.archive_fact("Entity", "old fact")
+
+    # Triggers
+    triggers = await m.get_triggers()
+
+    # Webhooks
+    await m.create_webhook(url="https://example.com/hook")
+    hooks = await m.get_webhooks()
+
+    # Jobs
+    status = await m.job_status("job-abc")
+    result = await m.wait_for_job("job-abc")
+
     # Close when done
     await m.close()
 
 asyncio.run(main())
 ```
 
-## API parity
+## Available Methods
 
-The async client has the same methods as the sync client. Just add `await` before each call.
+| Method | Description |
+|--------|-------------|
+| `add(messages, ...)` | Add memories from conversation |
+| `add_text(text, ...)` | Add memories from plain text |
+| `search(query, ...)` | Semantic search |
+| `search_all(query, ...)` | Unified search (all 3 types) |
+| `get_all(...)` | List all entities |
+| `get(name, ...)` | Get specific entity |
+| `delete(name, ...)` | Delete entity |
+| `stats(...)` | Usage statistics |
+| `get_profile(...)` | Cognitive Profile |
+| `episodes(...)` | Episodic memories |
+| `procedures(...)` | Procedural memories |
+| `procedure_feedback(id, ...)` | Record success/failure |
+| `graph(...)` | Knowledge graph |
+| `timeline(...)` | Temporal search |
+| `run_agents(...)` | Run memory agents |
+| `reflect(...)` | Trigger reflection |
+| `insights(...)` | Get AI insights |
+| `dedup(...)` | Deduplicate entities |
+| `merge(src, target, ...)` | Merge entities |
+| `archive_fact(entity, fact, ...)` | Archive a fact |
+| `get_triggers(...)` | Get smart triggers |
+| `create_webhook(url, ...)` | Create webhook |
+| `get_webhooks()` | List webhooks |
+| `job_status(id)` | Check job status |
+| `wait_for_job(id, ...)` | Poll until job completes |
 
-| Sync | Async |
-|------|-------|
-| `m.add(msgs)` | `await m.add(msgs)` |
-| `m.search(q)` | `await m.search(q)` |
-| `m.search_all(q)` | `await m.search_all(q)` |
-| `m.get_profile()` | `await m.get_profile()` |
-| `m.episodes()` | `await m.episodes()` |
-
-## Retry & error handling
+## Retry & Error Handling
 
 The async client automatically retries on transient errors (429, 502, 503, 504) and network failures, with exponential backoff up to 3 attempts.

@@ -9,7 +9,7 @@ description: "Node.js and browser SDK for Mengram with full TypeScript support."
 npm install mengram-ai
 ```
 
-## Quick start
+## Quick Start
 
 ```javascript
 const { MengramClient } = require('mengram-ai');
@@ -35,34 +35,323 @@ const profile = await m.getProfile('alice');
 ## TypeScript
 
 ```typescript
-import { MengramClient, SearchResult, Episode, Procedure } from 'mengram-ai';
+import { MengramClient, MengramError, QuotaExceededError } from 'mengram-ai';
 
 const m = new MengramClient('om-...');
 
-const results: SearchResult[] = await m.search('preferences');
-const events: Episode[] = await m.episodes({ query: 'deployment' });
-const procs: Procedure[] = await m.procedures({ query: 'release' });
+const results = await m.search('preferences');
+const events = await m.episodes({ query: 'deployment' });
+const procs = await m.procedures({ query: 'release' });
 ```
 
-## All methods
+## Constructor
 
-| Method | Description |
-|--------|-------------|
-| `add(messages, options?)` | Add memories (extracts all 3 types) |
-| `addText(text, options?)` | Add from plain text |
-| `search(query, options?)` | Semantic search |
-| `searchAll(query, options?)` | Unified search (all 3 types) |
-| `episodes(options?)` | Search/list episodic memories |
-| `procedures(options?)` | Search/list procedural memories |
-| `procedureFeedback(id, opts)` | Record success/failure |
-| `procedureHistory(id)` | Version history |
-| `getProfile(userId?, opts?)` | Cognitive Profile |
-| `getAll(options?)` | List all memories |
-| `get(name)` | Get specific entity |
-| `delete(name)` | Delete entity |
-| `runAgents(options?)` | Run memory agents |
+```javascript
+const m = new MengramClient('om-your-key', {
+    baseUrl: 'https://mengram.io',  // default
+    timeout: 30000,                  // 30s default
+});
+```
 
-## Multi-user isolation
+---
+
+## Core Methods
+
+### add(messages, options?)
+
+Add memories from a conversation. Extracts all 3 memory types.
+
+```javascript
+const result = await m.add([
+    { role: 'user', content: 'We use PostgreSQL and Railway' },
+    { role: 'assistant', content: 'Got it.' },
+], {
+    userId: 'alice',
+    agentId: 'support-bot',
+    appId: 'production',
+    expirationDate: '2027-01-01T00:00:00Z',
+});
+// { status: 'accepted', job_id: 'job-...' }
+```
+
+### addText(text, options?)
+
+Add memories from plain text.
+
+```javascript
+await m.addText('Meeting notes: decided to use Redis for caching', {
+    userId: 'alice',
+});
+```
+
+### search(query, options?)
+
+Semantic search with re-ranking.
+
+```javascript
+const results = await m.search('database preferences', {
+    limit: 10,
+    graphDepth: 3,
+    userId: 'alice',
+});
+```
+
+### searchAll(query, options?)
+
+Unified search across all 3 memory types.
+
+```javascript
+const all = await m.searchAll('deployment issues', { limit: 5 });
+// { semantic: [...], episodic: [...], procedural: [...] }
+```
+
+### getAll(options?) / getAllFull(options?)
+
+```javascript
+const memories = await m.getAll({ userId: 'alice' });
+const full = await m.getAllFull({ userId: 'alice' });  // with full facts
+```
+
+### get(name, options?) / delete(name, options?)
+
+```javascript
+const entity = await m.get('PostgreSQL');   // returns null if not found
+const ok = await m.delete('PostgreSQL');    // returns true/false
+```
+
+### fixEntityType(name, newType, options?)
+
+```javascript
+await m.fixEntityType('React', 'technology');
+```
+
+### stats(options?) / graph(options?)
+
+```javascript
+const stats = await m.stats();
+const graph = await m.graph();  // { nodes: [...], edges: [...] }
+```
+
+---
+
+## Cognitive Profile
+
+### getProfile(userId?, options?)
+
+Generate a ready-to-use system prompt from memory.
+
+```javascript
+const profile = await m.getProfile('alice', { force: true });
+console.log(profile.system_prompt);
+console.log(profile.facts_used);
+```
+
+---
+
+## Episodic Memory
+
+### episodes(options?)
+
+```javascript
+// Search
+const events = await m.episodes({ query: 'deployment', limit: 5 });
+
+// List recent
+const recent = await m.episodes({ limit: 20 });
+
+// Time range
+const jan = await m.episodes({
+    after: '2026-01-01',
+    before: '2026-02-01',
+});
+```
+
+---
+
+## Procedural Memory
+
+### procedures(options?)
+
+```javascript
+const procs = await m.procedures({ query: 'deploy' });
+```
+
+### procedureFeedback(id, options?)
+
+```javascript
+await m.procedureFeedback(procId, { success: true });
+await m.procedureFeedback(procId, {
+    success: false,
+    context: 'Build OOM at step 3',
+    failedAtStep: 3,
+});
+```
+
+### procedureHistory(id) / procedureEvolution(id)
+
+```javascript
+const history = await m.procedureHistory(procId);
+const evolution = await m.procedureEvolution(procId);
+```
+
+---
+
+## Timeline
+
+### timeline(options?)
+
+```javascript
+const facts = await m.timeline({
+    after: '2026-01-01',
+    before: '2026-02-01',
+    limit: 20,
+});
+```
+
+---
+
+## Agents
+
+### runAgents(options?)
+
+```javascript
+await m.runAgents({ agent: 'curator' });
+await m.runAgents();  // runs all agents
+```
+
+### agentHistory(options?) / agentStatus(options?)
+
+```javascript
+const history = await m.agentHistory({ limit: 5 });
+const status = await m.agentStatus();
+```
+
+---
+
+## Insights & Reflections
+
+```javascript
+await m.reflect();
+const insights = await m.insights();
+const refs = await m.reflections({ scope: 'cross' });
+```
+
+---
+
+## Memory Management
+
+```javascript
+await m.dedup();                           // merge duplicate entities
+await m.dedupAll();                        // dedup facts across all entities
+await m.dedupEntity('PostgreSQL');         // dedup one entity
+await m.merge('React.js', 'React');        // merge entities
+await m.mergeUser();                       // merge "User" into primary
+await m.archiveFact('Entity', 'old fact'); // archive a fact
+await m.reindex();                         // re-embed all entities
+```
+
+### feed(options?)
+
+```javascript
+const feed = await m.feed({ limit: 20 });
+```
+
+---
+
+## Webhooks
+
+```javascript
+await m.createWebhook({
+    url: 'https://your-app.com/hook',
+    eventTypes: ['memory_add', 'memory_update'],
+    secret: 'hmac-secret',
+});
+const hooks = await m.listWebhooks();
+await m.updateWebhook(1, { active: false });
+await m.deleteWebhook(1);
+```
+
+---
+
+## Teams
+
+```javascript
+const team = await m.createTeam('Engineering', 'Shared memory');
+await m.joinTeam('invite-code');
+const teams = await m.listTeams();
+const members = await m.teamMembers(teamId);
+
+await m.shareMemory('PostgreSQL', teamId);
+await m.unshareMemory('PostgreSQL', teamId);
+await m.leaveTeam(teamId);
+await m.deleteTeam(teamId);  // owner only
+```
+
+---
+
+## Smart Triggers
+
+```javascript
+const triggers = await m.getTriggers('alice', { includeFired: true });
+await m.processTriggers();
+await m.dismissTrigger(triggerId);
+await m.detectTriggers('alice');
+```
+
+---
+
+## API Keys
+
+```javascript
+const keys = await m.listKeys();
+const newKey = await m.createKey('production');
+await m.renameKey(keyId, 'staging');
+await m.revokeKey(keyId);
+```
+
+---
+
+## Billing
+
+```javascript
+const billing = await m.getBilling();
+const checkout = await m.createCheckout('pro');
+const portal = await m.createPortal();
+```
+
+---
+
+## Jobs
+
+```javascript
+const status = await m.jobStatus('job-abc');
+const result = await m.waitForJob('job-abc', {
+    pollInterval: 1000,
+    maxWait: 60000,
+});
+```
+
+---
+
+## Import Data
+
+```javascript
+// ChatGPT export (requires jszip)
+await m.importChatgpt('~/Downloads/chatgpt-export.zip', {
+    chunkSize: 20,
+    onProgress: (current, total, title) => console.log(`${current}/${total}: ${title}`),
+});
+
+// Obsidian vault
+await m.importObsidian('~/Documents/MyVault');
+
+// Text/markdown files
+await m.importFiles(['notes.md', 'journal.txt']);
+```
+
+---
+
+## Multi-User Isolation
 
 ```javascript
 // Each userId gets its own memory space
@@ -73,15 +362,20 @@ const alice = await m.searchAll('preferences', { userId: 'alice' });
 // Only Alice's memories
 ```
 
-## Import data
+---
+
+## Error Handling
 
 ```javascript
-// ChatGPT export (requires jszip)
-await m.importChatgpt('~/Downloads/chatgpt-export.zip');
+const { MengramClient, MengramError, QuotaExceededError } = require('mengram-ai');
 
-// Obsidian vault
-await m.importObsidian('~/Documents/MyVault');
-
-// Text/markdown files
-await m.importFiles(['notes.md', 'journal.txt']);
+try {
+    await m.add(messages);
+} catch (e) {
+    if (e instanceof QuotaExceededError) {
+        console.log('Upgrade your plan:', e.message);
+    } else if (e instanceof MengramError) {
+        console.log(`API error ${e.statusCode}: ${e.message}`);
+    }
+}
 ```

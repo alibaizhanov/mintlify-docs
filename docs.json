@@ -17,7 +17,8 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart"
+              "quickstart",
+              "cli"
             ]
           },
           {
@@ -39,10 +40,11 @@
           {
             "group": "Integrations",
             "pages": [
+              "claude-code",
+              "mcp-server",
               "langchain",
               "crewai",
-              "n8n",
-              "mcp-server"
+              "n8n"
             ]
           },
           {

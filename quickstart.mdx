@@ -80,6 +80,17 @@ response = openai.chat.completions.create(
 )
 ```
 
+## 6. Auto-save from Claude Code
+
+If you use Claude Code, set up automatic memory capture with one command:
+
+```bash
+export MENGRAM_API_KEY=om-your-key
+mengram hook install
+```
+
+Every 3rd Claude Code response is automatically saved to your memory. See [Claude Code Auto-Save](/claude-code) for details.
+
 <Tip>
 Use the environment variable `MENGRAM_API_KEY` so you don't have to pass the key every time: `m = Mengram()`
 </Tip>

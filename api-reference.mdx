@@ -11,17 +11,21 @@ https://mengram.io
 
 ## Authentication
 
-All requests require a Bearer token in the Authorization header:
+All `/v1/*` endpoints require a Bearer token:
 
 ```
 Authorization: Bearer om-your-api-key
 ```
 
-## Core endpoints
+Get your API key at [mengram.io](https://mengram.io/#signup).
+
+---
+
+## Memory — Core
 
 ### POST /v1/add
 
-Add memories from a conversation.
+Add memories from a conversation. Automatically extracts entities, facts, episodes, and procedures in the background.
 
 ```bash
 curl -X POST https://mengram.io/v1/add \
@@ -36,23 +40,81 @@ curl -X POST https://mengram.io/v1/add \
   }'
 ```
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `messages` | array | required | Chat messages with `role` and `content` |
+| `user_id` | string | `"default"` | User identifier for multi-user isolation |
+| `agent_id` | string | null | Agent identifier |
+| `run_id` | string | null | Session/run identifier |
+| `app_id` | string | null | Application identifier |
+| `expiration_date` | string | null | ISO datetime — facts auto-expire after this |
+
 Response: `{"status": "accepted", "job_id": "job-..."}`
 
 ### POST /v1/add_text
 
-Add memories from plain text.
+Add memories from plain text instead of chat messages.
 
 ```json
 {"text": "Meeting notes: migrating to PostgreSQL 16", "user_id": "default"}
 ```
 
+Same optional parameters as `/v1/add`.
+
+### GET /v1/memories
+
+List all entities for a user. Supports pagination.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | `"default"` | User whose memories to list |
+| `limit` | int | 100 | Max results |
+| `offset` | int | 0 | Pagination offset |
+
+### GET /v1/memories/full
+
+Get all memories with full facts, relations, and knowledge in a single request.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | `"default"` | User whose memories to list |
+| `limit` | int | 100 | Max results |
+| `offset` | int | 0 | Pagination offset |
+
+### GET /v1/memory/:name
+
+Get details for a specific entity including facts, relations, and knowledge.
+
+### DELETE /v1/memory/:name
+
+Delete a specific entity and all its data.
+
+### DELETE /v1/memories/all
+
+Delete ALL memories for a user. Irreversible.
+
+---
+
+## Search
+
 ### POST /v1/search
 
-Semantic search across the knowledge graph.
+Semantic search across the knowledge graph with LLM re-ranking.
 
 ```json
 {"query": "database preferences", "user_id": "default", "limit": 5, "graph_depth": 2}
 ```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | string | required | Natural language search query |
+| `user_id` | string | `"default"` | User whose memories to search |
+| `limit` | int | 5 | Max results |
+| `graph_depth` | int | 2 | Knowledge graph traversal depth (0-4) |
+| `agent_id` | string | null | Filter by agent |
+| `run_id` | string | null | Filter by run |
+| `app_id` | string | null | Filter by app |
+| `filters` | object | null | Metadata key-value filters (JSONB containment) |
 
 ### POST /v1/search/all
 
@@ -62,89 +124,432 @@ Unified search across all 3 memory types.
 {"query": "deployment", "user_id": "default", "limit": 5}
 ```
 
-Response: `{"semantic": [...], "episodic": [...], "procedural": [...]}`
+Response:
 
-### GET /v1/memories
+```json
+{
+  "semantic": [...],
+  "episodic": [...],
+  "procedural": [...]
+}
+```
 
-List all entities for a user.
+### GET /v1/timeline
 
-### GET /v1/memory/:name
+Temporal search — find facts within a time range.
 
-Get details for a specific entity.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `after` | string | null | ISO datetime start |
+| `before` | string | null | ISO datetime end |
+| `user_id` | string | `"default"` | User to search |
+| `limit` | int | 20 | Max results |
 
-### DELETE /v1/memory/:name
-
-Delete an entity.
+---
 
 ## Cognitive Profile
 
 ### GET /v1/profile
 
-Generate a Cognitive Profile system prompt.
+Generate a Cognitive Profile — a ready-to-use system prompt summarizing a user from memory.
 
-Query params: `force=true` to regenerate, `sub_user_id` for multi-user.
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | `"default"` | User to profile |
+| `force` | boolean | false | Regenerate (bypass cache) |
+
+### GET /v1/profile/:user_id
+
+Generate a profile for a specific sub-user.
+
+---
+
+## Rules Generation
+
+### GET /v1/rules
+
+Generate a CLAUDE.md, .cursorrules, or .windsurfrules file from memory.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `format` | string | `"claude_md"` | Output format: `claude_md`, `cursorrules`, `windsurf` |
+| `force` | boolean | false | Regenerate (bypass cache) |
+| `user_id` | string | `"default"` | User whose memories to use |
+
+Response: `{"format": "claude_md", "content": "# Project Rules\n..."}`
+
+---
 
 ## Episodic Memory
 
 ### GET /v1/episodes
 
-List recent episodes. Params: `limit`, `after`, `before`.
+List recent episodes. Each episode has a summary, context, outcome, and participants.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | int | 20 | Max results |
+| `after` | string | null | ISO datetime filter start |
+| `before` | string | null | ISO datetime filter end |
+| `user_id` | string | `"default"` | User to query |
 
 ### GET /v1/episodes/search
 
-Search episodes. Params: `query`, `limit`, `after`, `before`.
+Semantic search over episodic memories.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | string | required | Search query |
+| `limit` | int | 5 | Max results |
+| `after` | string | null | ISO datetime filter start |
+| `before` | string | null | ISO datetime filter end |
+| `user_id` | string | `"default"` | User to search |
+
+---
 
 ## Procedural Memory
 
 ### GET /v1/procedures
 
-List procedures. Params: `limit`.
+List learned workflows and procedures.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | int | 20 | Max results |
+| `user_id` | string | `"default"` | User to query |
 
 ### GET /v1/procedures/search
 
-Search procedures. Params: `query`, `limit`.
+Semantic search over procedural memories.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | string | required | Search query |
+| `limit` | int | 5 | Max results |
+| `user_id` | string | `"default"` | User to search |
 
 ### PATCH /v1/procedures/:id/feedback
 
-Record success/failure. Params: `success=true|false`. Body: `{"context": "...", "failed_at_step": 3}`
+Record success or failure for a procedure. On failure with context, triggers experience-driven evolution.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `success` | boolean | required | Whether the procedure worked |
+| `context` | string | null | What went wrong (triggers evolution) |
+| `failed_at_step` | int | null | Which step number failed |
+| `user_id` | string | `"default"` | User to query |
 
 ### GET /v1/procedures/:id/history
 
-Get version history for a procedure.
+Get version history for a procedure — how it evolved over time.
+
+### GET /v1/procedures/:id/evolution
+
+Get the evolution log — what changed at each version and why.
+
+---
+
+## Entity Management
+
+### DELETE /v1/entity/:name
+
+Delete an entity and all its facts, relations, knowledge, and embeddings.
+
+### PATCH /v1/entity/:name/type
+
+Fix an entity's type classification.
+
+```json
+{"type": "technology"}
+```
+
+Valid types: `person`, `project`, `technology`, `company`, `concept`, `unknown`.
+
+### POST /v1/entity/:name/dedup
+
+LLM-powered deduplication of facts on a single entity.
+
+---
 
 ## Memory Management
 
 ### POST /v1/dedup
 
-Find and merge duplicate entities.
+Find and merge duplicate entities using word-boundary matching.
+
+### POST /v1/dedup_all
+
+Deduplicate facts across ALL entities for the user.
 
 ### POST /v1/merge
 
-Merge two entities. Params: `source`, `target`.
+Merge source entity into target. Source gets deleted, all data moves to target.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `source` | string | required | Entity to merge from |
+| `target` | string | required | Entity to merge into |
+| `user_id` | string | `"default"` | User |
+
+### POST /v1/merge_user
+
+Merge the generic "User" entity into the primary person entity.
 
 ### POST /v1/archive_fact
 
-Archive a specific fact. Body: `{"entity_name": "...", "fact_content": "..."}`
+Archive a specific fact (soft-delete).
+
+```json
+{"entity_name": "PostgreSQL", "fact_content": "Uses version 15"}
+```
+
+### POST /v1/reindex
+
+Re-generate all embeddings for improved search quality.
+
+---
+
+## Insights & Reflections
+
+### POST /v1/reflect
+
+Manually trigger memory reflection. Generates AI insights from facts.
+
+### GET /v1/reflections
+
+Get all reflections. Optional `scope` filter: `entity`, `cross`, `temporal`.
+
+### GET /v1/insights
+
+Get formatted AI insights for dashboard display.
+
+---
+
+## Agents
 
 ### POST /v1/agents/run
 
-Run memory agents. Params: `agent=all|curator|connector|digest`, `auto_fix=true|false`.
+Run memory agents in the background. Returns a job_id.
 
-## Jobs
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `agent` | string | `"all"` | Agent to run: `curator`, `connector`, `digest`, or `all` |
+| `auto_fix` | boolean | false | Auto-archive bad facts |
+| `user_id` | string | `"default"` | User to run agents for |
 
-### GET /v1/jobs/:id
+### GET /v1/agents/history
 
-Check status of a background job. Response: `{"status": "completed|processing|failed", ...}`
+Get agent run history. Optional `agent` filter and `limit` parameter.
+
+### GET /v1/agents/status
+
+Check which agents are due to run.
+
+---
+
+## Smart Triggers
+
+### GET /v1/triggers
+
+Get smart triggers for the authenticated user — reminders, contradictions, patterns.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `include_fired` | boolean | false | Include already-fired triggers |
+| `limit` | int | 50 | Max results |
+| `user_id` | string | `"default"` | User to query |
+
+### GET /v1/triggers/:user_id
+
+Get triggers for a specific sub-user.
+
+### POST /v1/triggers/process
+
+Process all pending triggers — sends webhooks for triggered items.
+
+### DELETE /v1/triggers/:trigger_id
+
+Dismiss a specific trigger without firing its webhook.
+
+### POST /v1/triggers/detect/:user_id
+
+Manually run trigger detection for a user. Returns detailed results.
+
+---
+
+## Knowledge Graph
+
+### GET /v1/graph
+
+Get the knowledge graph for visualization. Returns nodes and edges.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `user_id` | string | `"default"` | User to query |
+
+### GET /v1/feed
+
+Activity feed — recent facts with timestamps.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `limit` | int | 50 | Max items |
+| `user_id` | string | `"default"` | User to query |
+
+---
 
 ## Webhooks
 
 ### POST /v1/webhooks
 
-Create a webhook. Body: `{"url": "...", "event_types": ["memory_add"]}`
+Create a webhook.
+
+```json
+{
+  "url": "https://your-app.com/hook",
+  "name": "Production",
+  "event_types": ["memory_add", "memory_update", "memory_delete"],
+  "secret": "your-hmac-secret"
+}
+```
 
 ### GET /v1/webhooks
 
 List all webhooks.
+
+### PUT /v1/webhooks/:id
+
+Update a webhook (url, name, event_types, active).
+
+### DELETE /v1/webhooks/:id
+
+Delete a webhook.
+
+---
+
+## Teams
+
+### POST /v1/teams
+
+Create a team. Returns team info with invite code.
+
+```json
+{"name": "Engineering", "description": "Shared engineering memory"}
+```
+
+### GET /v1/teams
+
+List your teams.
+
+### POST /v1/teams/join
+
+Join a team via invite code.
+
+```json
+{"invite_code": "abc123"}
+```
+
+### GET /v1/teams/:team_id/members
+
+Get team members.
+
+### POST /v1/teams/:team_id/share
+
+Share a memory entity with a team.
+
+```json
+{"entity_name": "PostgreSQL"}
+```
+
+### POST /v1/teams/:team_id/unshare
+
+Make a shared memory personal again.
+
+### POST /v1/teams/:team_id/leave
+
+Leave a team.
+
+### DELETE /v1/teams/:team_id
+
+Delete a team (owner only).
+
+---
+
+## API Keys
+
+### GET /v1/keys
+
+List all API keys for your account.
+
+### POST /v1/keys
+
+Create a new API key.
+
+```json
+{"name": "production-key"}
+```
+
+### DELETE /v1/keys/:key_id
+
+Revoke a specific API key.
+
+### PATCH /v1/keys/:key_id
+
+Rename an API key.
+
+```json
+{"name": "new-name"}
+```
+
+---
+
+## Jobs
+
+### GET /v1/jobs/:id
+
+Check status of a background job.
+
+Response: `{"status": "completed|processing|failed", ...}`
+
+---
+
+## Billing
+
+### GET /v1/billing
+
+Get current subscription plan, usage, and quotas.
+
+### POST /v1/billing/checkout
+
+Create a Paddle checkout session for plan upgrade.
+
+```json
+{"plan": "pro"}
+```
+
+### POST /v1/billing/portal
+
+Create a Paddle customer portal session for managing subscription.
+
+---
+
+## Statistics
+
+### GET /v1/stats
+
+Get usage statistics for the authenticated user.
+
+### GET /v1/me
+
+Get current account info (email, plan, user_id).
+
+---
+
+## Health
+
+### GET /v1/health
+
+Health check. Returns basic status for unauthenticated requests; detailed diagnostics for authenticated.
 
 <Tip>
 For interactive API docs, see [Swagger UI](https://mengram.io/swagger) or [ReDoc](https://mengram.io/redoc).
