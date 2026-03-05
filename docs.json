@@ -113,5 +113,22 @@
   },
   "seo": {
     "indexHiddenPages": false
-  }
+  },
+  "metadata": {
+    "og:site_name": "Mengram Docs",
+    "og:image": "https://opengraph.githubassets.com/1/alibaizhanov/mengram",
+    "og:locale": "en_US",
+    "twitter:card": "summary_large_image",
+    "twitter:site": "@mengram_io",
+    "twitter:image": "https://opengraph.githubassets.com/1/alibaizhanov/mengram"
+  },
+  "head": [
+    {
+      "tag": "meta",
+      "attributes": {
+        "name": "google-site-verification",
+        "content": "AgH6oyB88LhyyfEqVQn9XnT1mPiFpgCX5GFVJMC5yEs"
+      }
+    }
+  ]
 }
