@@ -1,11 +1,17 @@
 ---
-title: "Claude Code Auto-Save"
-description: "Automatically capture conversations from Claude Code into Mengram using hooks — zero manual effort."
+title: "Claude Code Integration"
+description: "Full memory loop for Claude Code — auto-save conversations, auto-recall context on every prompt, and load your profile on session start."
 ---
 
 ## Overview
 
-Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) hooks to automatically save conversations to your memory vault. Every Nth response, Mengram captures the user message and assistant response, extracts entities, facts, episodes, and procedures — all in the background.
+Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) hooks to create a full memory loop:
+
+1. **Session context** — loads your cognitive profile when a session starts, so Claude knows who you are
+2. **Auto-recall** — searches relevant memories on every prompt and injects them as context
+3. **Auto-save** — captures conversations in the background to build up memory over time
+
+Zero manual effort. One command to install.
 
 ## Quick Setup
 
@@ -15,35 +21,106 @@ export MENGRAM_API_KEY=om-your-key
 mengram hook install
 ```
 
-That's it. Restart Claude Code and your conversations start saving automatically.
+Restart Claude Code. Done.
 
 ## How It Works
 
-1. Claude Code fires a `Stop` hook after each assistant response
-2. Mengram reads the last user message and assistant response
-3. Every Nth response (default: 3), it sends the pair to the Mengram API
-4. The API extracts entities, facts, episodes, and procedures in the background
-5. Your memories build up automatically over time
+### 1. Session Start — Profile Loaded
 
-The hook runs asynchronously — it never blocks or slows down Claude Code.
+When you open Claude Code (or after context compaction), the `SessionStart` hook fires:
+
+```
+Session starts
+  → mengram auto-context runs
+  → Loads your Cognitive Profile from Mengram (GET /v1/profile)
+  → Prints it to stdout — Claude sees it as context
+
+Claude now knows: your name, preferences, tech stack, current projects
+```
+
+### 2. Every Prompt — Relevant Memories Recalled
+
+When you type a prompt, the `UserPromptSubmit` hook fires **before** Claude responds:
+
+```
+You type: "how did we deploy to Railway?"
+  → mengram auto-recall runs
+  → Searches Mengram for relevant memories (POST /v1/search)
+  → Returns additionalContext that Claude sees:
+
+  [Mengram Memory — relevant context from past sessions]
+  Railway Deployment:
+    - Auto-deploys from main branch
+    - Uses gunicorn with 1 worker
+    - DATABASE_URL uses Session Mode port 5432
+
+Claude responds WITH context from your past sessions
+```
+
+### 3. After Response — Conversation Saved
+
+After Claude responds, the `Stop` hook fires asynchronously in the background:
+
+```
+Claude finishes responding
+  → mengram auto-save runs (background, non-blocking)
+  → Every 3rd response, sends [user + assistant] to POST /v1/add
+  → API extracts entities, facts, episodes, procedures
+  → Memory grows over time
+```
+
+### Full Loop
+
+```
+┌──────────────────────────────────────────────┐
+│  Session starts                              │
+│  ↓ SessionStart → profile loaded             │
+│                                              │
+│  You type a prompt                           │
+│  ↓ UserPromptSubmit → relevant memory found  │
+│                                              │
+│  Claude responds (with memory context)       │
+│  ↓ Stop → conversation saved (background)    │
+│                                              │
+│  Next prompt → recall again...               │
+└──────────────────────────────────────────────┘
+```
 
 ## Commands
 
 ### mengram hook install
 
-Install the auto-save hook into Claude Code settings.
+Installs all 3 hooks into `~/.claude/settings.json`.
 
 ```bash
-mengram hook install                    # default: every 3rd response
-mengram hook install --every 5          # every 5th response
+mengram hook install                    # default: save every 3rd response
+mengram hook install --every 5          # save every 5th response
 mengram hook install --user-id myuser   # custom user_id
 ```
 
-This adds a `Stop` hook to `~/.claude/settings.json`:
+This adds 3 hooks to your Claude Code settings:
 
 ```json
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-context",
+          "timeout": 15
+        }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-recall",
+          "timeout": 10
+        }]
+      }
+    ],
     "Stop": [
       {
         "hooks": [{
@@ -60,7 +137,7 @@ This adds a `Stop` hook to `~/.claude/settings.json`:
 
 ### mengram hook status
 
-Check if the hook is installed and working.
+Check status of all hooks.
 
 ```bash
 mengram hook status
@@ -69,17 +146,19 @@ mengram hook status
 Output:
 
 ```
-Mengram Auto-Save Hook
+Mengram Hooks
 
-  Hook:     installed (every 3 responses)
-  API Key:  om-...Kb8 (set)
-  API:      connected (free plan)
-  Settings: /Users/you/.claude/settings.json
+  Auto-save:      installed (every 3 responses)
+  Auto-recall:    installed
+  Session context: installed
+  API Key:        om-...Kb8 (set)
+  API:            connected (free plan)
+  Settings:       /Users/you/.claude/settings.json
 ```
 
 ### mengram hook uninstall
 
-Remove the hook and clean up.
+Remove all Mengram hooks.
 
 ```bash
 mengram hook uninstall
@@ -102,23 +181,31 @@ mengram hook uninstall
 
 ## Filtering
 
-The hook automatically skips:
-
+**Auto-save** skips:
 - Short responses (< 100 characters) — trivial confirmations
 - Interrupted requests
 - Responses when no API key is set
 
+**Auto-recall** skips:
+- Very short prompts (< 10 characters)
+- Slash commands (`/help`, `/clear`, etc.)
+- Simple confirmations (`yes`, `no`, `ok`)
+
 ## Troubleshooting
 
-**Hook not firing?**
+**Hooks not firing?**
 - Restart Claude Code after installing
-- Check `mengram hook status` to verify installation
+- Check `mengram hook status` to verify all 3 hooks are installed
 - Make sure `MENGRAM_API_KEY` is set in your shell profile (`.zshrc` / `.bashrc`)
 
 **Memories not appearing?**
-- Memories are processed in the background — check after ~30 seconds
+- Auto-save processes in the background — check after ~30 seconds
 - Verify API connectivity: `mengram hook status`
 - Check your memories at [mengram.io/dashboard](https://mengram.io/dashboard)
+
+**Recall seems slow?**
+- Auto-recall has a 10-second timeout — if the API is slow, it's skipped gracefully
+- Claude Code continues normally even if a hook fails
 
 <Tip>
 Set `MENGRAM_API_KEY` in your shell profile so it persists across sessions:

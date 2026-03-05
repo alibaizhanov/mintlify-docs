@@ -78,10 +78,10 @@ mengram rules --force                  # regenerate (bypass cache)
 
 ### mengram hook
 
-Manage Claude Code auto-save hook. See [Claude Code Auto-Save](/claude-code) for details.
+Manage Claude Code memory hooks (auto-save + auto-recall + session context). See [Claude Code Integration](/claude-code) for details.
 
 ```bash
-mengram hook install              # install auto-save hook
+mengram hook install              # install all 3 hooks
 mengram hook install --every 5    # save every 5th response
 mengram hook status               # check hook status
 mengram hook uninstall            # remove hook

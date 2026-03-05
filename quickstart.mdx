@@ -80,16 +80,21 @@ response = openai.chat.completions.create(
 )
 ```
 
-## 6. Auto-save from Claude Code
+## 6. Claude Code — Full Memory Loop
 
-If you use Claude Code, set up automatic memory capture with one command:
+If you use Claude Code, set up automatic memory with one command:
 
 ```bash
 export MENGRAM_API_KEY=om-your-key
 mengram hook install
 ```
 
-Every 3rd Claude Code response is automatically saved to your memory. See [Claude Code Auto-Save](/claude-code) for details.
+This installs 3 hooks:
+- **Session context** — loads your profile when Claude Code starts
+- **Auto-recall** — searches relevant memories on every prompt
+- **Auto-save** — captures conversations in the background
+
+Claude Code remembers you across sessions automatically. See [Claude Code Integration](/claude-code) for details.
 
 <Tip>
 Use the environment variable `MENGRAM_API_KEY` so you don't have to pass the key every time: `m = Mengram()`
