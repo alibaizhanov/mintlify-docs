@@ -82,12 +82,13 @@ response = openai.chat.completions.create(
 
 ## 6. Claude Code — Full Memory Loop
 
-If you use Claude Code, set up automatic memory with one command:
+If you use Claude Code, set up automatic memory in one command:
 
 ```bash
-export MENGRAM_API_KEY=om-your-key
-mengram hook install
+mengram setup
 ```
+
+This creates your account (if needed), saves your API key, and installs hooks — all from the terminal. Or manually: `export MENGRAM_API_KEY=om-your-key` → `mengram hook install`.
 
 This installs 3 hooks:
 - **Session context** — loads your profile when Claude Code starts

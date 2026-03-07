@@ -11,6 +11,23 @@ pip install mengram-ai
 
 ## Commands
 
+### mengram setup
+
+Interactive signup and configuration — creates your account, saves the API key to your shell profile, and installs Claude Code hooks. All from the terminal.
+
+```bash
+mengram setup
+mengram setup --email you@example.com    # skip email prompt
+mengram setup --no-hooks                 # skip Claude Code hook install
+```
+
+| Flag | Description |
+|------|-------------|
+| `--email` | Email address (skip interactive prompt) |
+| `--no-hooks` | Skip Claude Code hook installation |
+
+If you already have a key, it will ask whether to reconfigure. If the email is already registered, it offers to reset your API key.
+
 ### mengram init
 
 Interactive setup — creates config, vault, and Claude Desktop MCP integration.
