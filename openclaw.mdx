@@ -1,0 +1,122 @@
+---
+title: "OpenClaw Plugin"
+description: "Give your OpenClaw agent persistent memory with auto-recall, auto-capture, and 12 memory tools."
+---
+
+## Install
+
+```bash
+openclaw plugins install openclaw-mengram
+```
+
+## Setup
+
+1. Get a free API key at [mengram.io](https://mengram.io)
+
+2. Add to `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "plugins": {
+    "entries": {
+      "openclaw-mengram": {
+        "enabled": true,
+        "config": {
+          "apiKey": "${MENGRAM_API_KEY}"
+        }
+      }
+    },
+    "slots": {
+      "memory": "openclaw-mengram"
+    }
+  }
+}
+```
+
+3. Set your API key:
+
+```bash
+export MENGRAM_API_KEY="om-your-key-here"
+```
+
+4. Restart OpenClaw. Memory works automatically.
+
+## How It Works
+
+**Auto-recall:** Before every agent turn, relevant memories are injected into context via `before_agent_start` hook. No manual tool calls needed.
+
+**Auto-capture:** After every turn, new information is automatically extracted and stored via `agent_end` hook. Nothing is lost.
+
+## Tools
+
+The agent can use these 12 tools explicitly:
+
+| Tool | Purpose |
+|---|---|
+| `memory_search` | Search all 3 memory types with Graph RAG |
+| `memory_store` | Save text to long-term memory |
+| `memory_forget` | Delete a memory entity by name |
+| `memory_profile` | Get cognitive profile (who the user is) |
+| `memory_procedures` | List or search learned workflows |
+| `memory_feedback` | Record workflow success/failure (triggers evolution) |
+| `memory_episodes` | Search or list past events with date filtering |
+| `memory_timeline` | Get chronological timeline of memory events |
+| `memory_triggers` | Get smart triggers (reminders, contradictions, patterns) |
+| `memory_insights` | Get AI-generated reflections and patterns |
+| `memory_agents` | Run maintenance agents (curator, connector, digest) |
+| `memory_graph` | Get the knowledge graph (entities + connections) |
+
+## Slash Commands
+
+| Command | Action |
+|---|---|
+| `/remember <text>` | Save to memory |
+| `/recall <query>` | Search memory |
+| `/forget <entity>` | Delete from memory |
+
+## CLI
+
+```bash
+openclaw mengram search "coffee preferences"   # Search all 3 memory types
+openclaw mengram stats                          # Memory usage statistics
+openclaw mengram profile                        # Cognitive profile
+openclaw mengram procedures                     # List learned workflows
+openclaw mengram episodes                       # List past events
+openclaw mengram timeline                       # Chronological event timeline
+openclaw mengram triggers                       # Smart triggers
+openclaw mengram insights                       # AI-generated reflections
+openclaw mengram agents                         # Run maintenance agents
+openclaw mengram graph                          # Knowledge graph
+openclaw mengram feed                           # Activity feed
+openclaw mengram reindex                        # Reindex embeddings
+openclaw mengram dedup                          # Deduplicate memories
+openclaw mengram merge <source> <target>        # Merge two entities
+```
+
+## Configuration
+
+| Option | Default | Description |
+|---|---|---|
+| `apiKey` | `$MENGRAM_API_KEY` | API key from mengram.io |
+| `baseUrl` | `https://mengram.io` | Custom URL for self-hosted |
+| `autoRecall` | `true` | Inject memories before each turn |
+| `autoCapture` | `true` | Store memories after each turn |
+| `topK` | `5` | Max results per search |
+| `graphDepth` | `2` | Knowledge graph hops (0=off, 1, 2) |
+| `injectProfile` | `false` | Include cognitive profile periodically |
+| `profileFrequency` | `25` | Profile injection every N turns |
+| `maxFactsPerEntity` | `5` | Max facts shown per entity in context |
+| `maxRelationsPerEntity` | `5` | Max relationships shown per entity |
+| `maxEpisodes` | `5` | Max episodic memories in context |
+| `maxProcedures` | `3` | Max procedures in context |
+| `maxStepsPerProcedure` | `8` | Max steps shown per procedure |
+| `captureMessageCount` | `10` | Messages to capture after each turn |
+| `maxTriggers` | `10` | Max triggers shown |
+| `maxTimelineItems` | `20` | Max timeline items shown |
+| `requestTimeout` | `15000` | HTTP timeout in milliseconds |
+| `debug` | `false` | Verbose logging |
+
+## Links
+
+- [npm: openclaw-mengram](https://www.npmjs.com/package/openclaw-mengram)
+- [GitHub: openclaw-mengram](https://github.com/alibaizhanov/openclaw-mengram)

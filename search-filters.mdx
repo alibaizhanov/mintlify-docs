@@ -41,18 +41,29 @@ results = m.search("issues", filters={
 results = m.search("config", agent_id="support-bot", app_id="prod")
 ```
 
-## Graph depth
+## Graph RAG (graph depth)
 
-Controls how many relationship hops the search traverses. Higher values find more related context but take longer.
+Mengram uses Graph RAG — retrieval-augmented generation over a knowledge graph. Instead of flat vector search, it traverses entity relationships to find connected context.
+
+```
+Query: "database issues"
+  → Direct: PostgreSQL (technology)
+    → 1 hop: Railway (platform) — "deployed_on"
+      → 2 hop: OOM Bug (event) — "occurred_on" → Railway
+```
+
+Searching for "database issues" also surfaces that OOM bug on Railway — connected through the knowledge graph, not through keyword or embedding similarity.
+
+Control traversal depth with `graph_depth`:
 
 ```python
-# Shallow — just direct matches
+# Shallow — just direct matches, fastest
 results = m.search("Python", graph_depth=0)
 
 # Default — 2 hops (entity → related → related)
 results = m.search("Python", graph_depth=2)
 
-# Deep — traverse far connections
+# Deep — traverse far connections, slower but more context
 results = m.search("Python", graph_depth=4)
 ```
 

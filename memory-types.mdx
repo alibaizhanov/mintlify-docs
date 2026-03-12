@@ -67,6 +67,53 @@ history = m.procedure_history(proc_id)
 # {"versions": [v1, v2, v3], "evolution_log": [...]}
 ```
 
+## Graph RAG
+
+Memories aren't flat — they're connected in a knowledge graph. When you search, Mengram doesn't just find direct matches. It traverses relationships to surface context that simple vector search misses.
+
+```
+Query: "Python"
+  → Direct match: Python (technology)
+    → 1 hop: Django (framework) — "used_with" → Python
+      → 2 hop: Railway (platform) — "deployed_on" → Django
+```
+
+This 2-hop traversal means searching for "Python" also returns your Django deployment setup on Railway — context that a flat vector search would never find.
+
+Control traversal depth with `graph_depth`:
+
+```python
+m.search("Python", graph_depth=0)  # direct matches only
+m.search("Python", graph_depth=2)  # default — 2 hops
+m.search("Python", graph_depth=4)  # deep traversal
+```
+
+## Ebbinghaus Decay
+
+Mengram models memory decay like the human brain. Facts that haven't been accessed recently fade in importance, while frequently recalled facts get stronger.
+
+The formula: `effective_importance = base_importance * e^(-0.03 * days_since_access) + frequency_boost`
+
+- A fact accessed yesterday has full weight
+- A fact untouched for 30 days decays to ~40% weight
+- A fact accessed 100 times gets a frequency boost regardless of recency
+
+This means search results naturally prioritize fresh, relevant knowledge over stale information — without manual cleanup.
+
+The [curator agent](/api-reference) also periodically finds and archives facts that have become outdated or contradicted by newer information.
+
+## Confidence Scoring
+
+Procedural memory uses confidence scoring to decide when to create new procedures:
+
+| Confidence | Action |
+|---|---|
+| < 0.4 | Skip — not enough evidence |
+| 0.4 – 0.6 | Create a suggestion trigger — user decides |
+| >= 0.6 | Auto-create the procedure |
+
+Confidence is calculated from episode clustering — how many similar events support the pattern. This prevents noisy one-off events from becoming permanent workflows.
+
 ## Unified Search
 
 Search all three types at once with a single call:

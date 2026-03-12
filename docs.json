@@ -41,6 +41,7 @@
             "group": "Integrations",
             "pages": [
               "claude-code",
+              "openclaw",
               "mcp-server",
               "langchain",
               "crewai",
