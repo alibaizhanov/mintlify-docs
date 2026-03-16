@@ -47,6 +47,9 @@ async def main():
         {"role": "user", "content": "Deployed on Railway with PostgreSQL"},
     ])
 
+    # Upload a file (PDF, DOCX, TXT, MD)
+    await m.add_file("meeting-notes.pdf")
+
     # Search
     results = await m.search("deployment")
 
@@ -100,6 +103,7 @@ asyncio.run(main())
 |--------|-------------|
 | `add(messages, ...)` | Add memories from conversation |
 | `add_text(text, ...)` | Add memories from plain text |
+| `add_file(file_path, ...)` | Upload file (PDF, DOCX, TXT, MD) |
 | `search(query, ...)` | Semantic search |
 | `search_all(query, ...)` | Unified search (all 3 types) |
 | `get_all(...)` | List all entities |

@@ -61,6 +61,28 @@ m.add_text("Meeting notes: decided to migrate to PostgreSQL 16")
 
 Same parameters as `add()` except `text` instead of `messages`.
 
+### add_file(file_path, ...)
+
+Upload a file and extract structured memories. Supports PDF (vision AI extraction), DOCX, TXT, and MD. Each page/chunk counts as 1 add from your quota. Returns immediately — processing happens in background.
+
+```python
+result = m.add_file("meeting-notes.pdf")
+# {"status": "accepted", "job_id": "job-...", "file_type": "pdf", "page_count": 12, "quota_used": 12}
+
+# Poll for completion
+m.wait_for_job(result["job_id"])
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `file_path` | str | required | Path to file (.pdf, .docx, .txt, .md) |
+| `user_id` | str | `"default"` | User identifier |
+| `agent_id` | str | None | Agent identifier |
+| `run_id` | str | None | Session/run identifier |
+| `app_id` | str | None | Application identifier |
+
+**File size limits:** Free 10MB, Pro 50MB, Business 100MB.
+
 ### search(query, ...)
 
 Semantic search across the knowledge graph with re-ranking.

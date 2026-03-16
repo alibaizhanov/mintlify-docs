@@ -84,6 +84,26 @@ await m.addText('Meeting notes: decided to use Redis for caching', {
 });
 ```
 
+### addFile(file, options?)
+
+Upload a file and extract structured memories. Supports PDF (vision AI), DOCX, TXT, MD. Returns immediately with job_id.
+
+```javascript
+// Node.js — pass a file path
+const result = await m.addFile('./meeting-notes.pdf');
+// { status: 'accepted', job_id: 'job-...', file_type: 'pdf', page_count: 12 }
+
+// Browser — pass a File object from <input type="file">
+await m.addFile(fileInput.files[0]);
+
+// Poll for completion
+await m.waitForJob(result.job_id);
+```
+
+Options: `userId`, `agentId`, `runId`, `appId`, `filename` (override filename for Blob inputs).
+
+**File size limits:** Free 10MB, Pro 50MB, Business 100MB.
+
 ### search(query, options?)
 
 Semantic search with re-ranking.

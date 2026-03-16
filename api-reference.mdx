@@ -61,6 +61,41 @@ Add memories from plain text instead of chat messages.
 
 Same optional parameters as `/v1/add`.
 
+### POST /v1/add_file
+
+Upload a file (PDF, DOCX, TXT, MD) and extract structured memories. PDFs use two-pass vision AI extraction. Each page/chunk counts as 1 add from your quota.
+
+**Content-Type:** `multipart/form-data` (not JSON)
+
+```bash
+curl -X POST https://mengram.io/v1/add_file \
+  -H "Authorization: Bearer om-..." \
+  -F "file=@meeting-notes.pdf" \
+  -F "user_id=default"
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `file` | file | required | File to upload (.pdf, .docx, .txt, .md) |
+| `user_id` | string | `"default"` | User identifier |
+| `agent_id` | string | null | Agent identifier |
+| `run_id` | string | null | Session/run identifier |
+| `app_id` | string | null | Application identifier |
+
+**File size limits:** Free 10MB, Pro 50MB, Business 100MB.
+
+Response (202):
+```json
+{
+  "status": "accepted",
+  "job_id": "job-...",
+  "file_type": "pdf",
+  "page_count": 12,
+  "quota_used": 12,
+  "message": "Processing meeting-notes.pdf (12 pages/chunks) in background."
+}
+```
+
 ### GET /v1/memories
 
 List all entities for a user. Supports pagination.
