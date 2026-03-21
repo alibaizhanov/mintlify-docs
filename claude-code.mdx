@@ -192,6 +192,22 @@ mengram hook uninstall
 - Slash commands (`/help`, `/clear`, etc.)
 - Simple confirmations (`yes`, `no`, `ok`)
 
+## Quota Limits
+
+When you hit your monthly plan limits, each hook surfaces a clear warning instead of failing silently:
+
+| Hook | What happens | Message shown |
+|------|-------------|---------------|
+| **Auto-recall** | Search quota exceeded | Claude sees: `[Mengram] Memory search quota exceeded — recall is disabled` |
+| **Auto-context** | Profile load fails | Session start shows: `[Mengram] Memory profile load failed — quota exceeded` |
+| **Auto-save** | Save quota exceeded | Terminal shows: `[Mengram] Memory save failed — Your conversations are NOT being saved` |
+
+All messages include an upgrade link. Claude Code is never blocked — hooks continue gracefully.
+
+Non-quota errors (network timeouts, transient failures) are silently swallowed so they never interrupt your workflow.
+
+To check your current usage: `mengram stats` or visit [mengram.io/dashboard](https://mengram.io/dashboard).
+
 ## Troubleshooting
 
 **Hooks not firing?**
@@ -207,6 +223,11 @@ mengram hook uninstall
 **Recall seems slow?**
 - Auto-recall has a 10-second timeout — if the API is slow, it's skipped gracefully
 - Claude Code continues normally even if a hook fails
+
+**Seeing quota warnings?**
+- You've hit your monthly plan limit — memory is disabled until the limit resets or you upgrade
+- Run `mengram stats` to check usage
+- Upgrade at [mengram.io/dashboard](https://mengram.io/dashboard)
 
 <Tip>
 Run `mengram setup` to automatically save your API key to your shell profile and install all hooks in one step.

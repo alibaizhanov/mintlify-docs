@@ -580,6 +580,58 @@ Get current account info (email, plan, user_id).
 
 ---
 
+## Error Responses
+
+All endpoints return structured JSON errors.
+
+### 401 Unauthorized
+
+Invalid or missing API key.
+
+```json
+{"detail": "Invalid API key"}
+```
+
+### 402 Quota Exceeded
+
+Monthly plan limit reached. Includes upgrade URL and retry timing.
+
+```json
+{
+  "error": "quota_exceeded",
+  "action": "add",
+  "limit": 50,
+  "used": 50,
+  "plan": "free",
+  "upgrade_url": "https://mengram.io/checkout?token=...",
+  "message": "Monthly add limit reached (50). Upgrade to Starter ($5/mo) at ...",
+  "retry_after": 864000
+}
+```
+
+The response also includes a `Retry-After` header (seconds until monthly reset).
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `error` | string | Always `"quota_exceeded"` |
+| `action` | string | Which action was blocked: `add`, `search`, `add_file` |
+| `limit` | int | Monthly limit for this action |
+| `used` | int | Current usage count |
+| `plan` | string | Current plan: `free`, `starter`, `pro`, `business` |
+| `upgrade_url` | string | Direct upgrade link (includes signed checkout token) |
+| `message` | string | Human-readable message with next plan and price |
+| `retry_after` | int | Seconds until quota resets (end of month) |
+
+### 429 Rate Limited
+
+Too many requests. Retry after the `Retry-After` header value.
+
+```json
+{"detail": "Rate limit exceeded"}
+```
+
+---
+
 ## Health
 
 ### GET /v1/health

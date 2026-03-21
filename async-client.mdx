@@ -130,4 +130,17 @@ asyncio.run(main())
 
 ## Retry & Error Handling
 
-The async client automatically retries on transient errors (429, 502, 503, 504) and network failures, with exponential backoff up to 3 attempts.
+The async client automatically retries on transient errors (429, 502, 503, 504) and network failures, with exponential backoff up to 3 attempts. **402 (quota exceeded) is never retried** — it raises `QuotaExceededError` immediately.
+
+```python
+from mengram import AsyncMengram
+from mengram.cloud.async_client import QuotaExceededError
+
+async def safe_add(m, messages):
+    try:
+        return await m.add(messages)
+    except QuotaExceededError as e:
+        print(f"Quota hit: {e.action} {e.current}/{e.limit} ({e.plan})")
+        # e.action = "add" | "search" | "add_file"
+        # e.plan = "free" | "starter" | "pro"
+```

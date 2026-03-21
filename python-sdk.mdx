@@ -384,3 +384,38 @@ m.import_files(["notes.md", "journal.txt"])
 ```
 
 All import methods support `user_id`, `chunk_size`/`chunk_chars`, and `on_progress` callback.
+
+---
+
+## Error Handling
+
+### QuotaExceededError
+
+Raised when your monthly plan limit is reached (HTTP 402). Not retried.
+
+```python
+from mengram import Mengram
+from mengram.cloud.client import QuotaExceededError
+
+m = Mengram()
+
+try:
+    m.add([{"role": "user", "content": "Hello"}])
+except QuotaExceededError as e:
+    print(e.action)   # "add" or "search"
+    print(e.limit)    # 50
+    print(e.current)  # 50
+    print(e.plan)     # "free"
+    print(e)          # "Quota exceeded for 'add': 50/50 (plan: free). Upgrade at ..."
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `action` | str | Which action was blocked (`add`, `search`, `add_file`) |
+| `limit` | int | Monthly limit for this action |
+| `current` | int | Current usage count |
+| `plan` | str | Current plan (`free`, `starter`, `pro`) |
+
+### Retry Behavior
+
+The client automatically retries on transient errors (429, 502, 503, 504) with exponential backoff up to 3 attempts. **402 (quota exceeded) is never retried.**
