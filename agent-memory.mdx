@@ -1,0 +1,156 @@
+---
+title: "Agent Memory"
+description: "Give your AI agents persistent memory with agent_id scoping, run tracking, and procedural learning."
+---
+
+## Why agents need memory
+
+Your agents run thousands of tasks but start from scratch every time. Customer context is lost between sessions. Proven workflows are forgotten. Mistakes get repeated.
+
+Mengram gives agents persistent memory across 3 dimensions:
+- **Facts** (semantic) — what the agent knows about users, systems, policies
+- **Events** (episodic) — what happened in past runs, with outcomes
+- **Workflows** (procedural) — learned step-by-step procedures with success/failure tracking
+
+## The agent memory loop
+
+```
+Agent starts run
+  → search() recalls relevant context from past runs
+  → Agent executes task with full context
+  → add() saves the conversation
+  → Mengram auto-extracts facts, events, and procedures
+  → Next run starts smarter
+```
+
+## Quick start
+
+```python
+from mengram import Mengram
+
+m = Mengram(api_key="om-your-key")
+
+# 1. Before the agent acts — recall relevant context
+context = m.search_all("customer refund request", agent_id="support-bot")
+# Returns: {"semantic": [...], "episodic": [...], "procedural": [...]}
+
+# Inject into your agent's system prompt
+system_prompt = f"""You are a support agent.
+Relevant memories:
+{context}
+"""
+
+# 2. Agent handles the task (your agent framework here)
+response = call_llm(system_prompt, user_message)
+
+# 3. After the agent acts — save the conversation
+m.add([
+    {"role": "user", "content": "Customer wants refund for order #1234"},
+    {"role": "assistant", "content": "Processed refund, applied loyalty discount."},
+], agent_id="support-bot", run_id="run-42")
+```
+
+## Key parameters
+
+| Parameter | Purpose | Example |
+|-----------|---------|---------|
+| `agent_id` | Scope memories per agent — one API key, many agents | `"support-bot"`, `"devops-agent"` |
+| `run_id` | Track which run produced a memory | `"run-42"`, session IDs |
+| `user_id` | Isolate memories per end-user | `"alice"`, `"customer-123"` |
+| `app_id` | Separate environments | `"prod"`, `"staging"` |
+
+All parameters work with `add()`, `search()`, `search_all()`, and other endpoints.
+
+## Filtering by agent
+
+Search only memories from a specific agent:
+
+```python
+# Only support-bot memories
+results = m.search("refund policy", agent_id="support-bot")
+
+# Only memories from a specific run
+results = m.search("deployment", run_id="run-42")
+
+# Combine with user isolation
+results = m.search("preferences", agent_id="support-bot", user_id="customer-123")
+```
+
+## Procedural learning
+
+Mengram extracts step-by-step workflows from agent conversations and tracks which ones succeed. Agents get better over time without retraining.
+
+```python
+# Search for relevant procedures
+procs = m.procedures(query="deploy to Railway")
+# [{"name": "Railway Deployment", "steps": [...], "success_count": 8, "fail_count": 1}]
+
+# Report outcome after agent completes a task
+m.procedure_feedback(proc_id, success=True)
+
+# On failure, the procedure evolves automatically
+m.procedure_feedback(proc_id, success=False,
+    context="OOM error at build step",
+    failed_at_step=3)
+
+# Next time, the agent gets the updated procedure
+```
+
+## Multi-agent systems
+
+Multiple agents can share the same memory pool or be isolated:
+
+```python
+# Agent A discovers something
+m.add([...], agent_id="researcher")
+
+# Agent B finds what A learned
+results = m.search("findings", agent_id="researcher")
+
+# Search across ALL agents (omit agent_id)
+results = m.search("findings")
+```
+
+## Framework integrations
+
+| Framework | Guide | What it does |
+|-----------|-------|------|
+| CrewAI | [CrewAI Integration](/crewai) | 5 memory tools for persistent crews |
+| LangChain | [LangChain Integration](/langchain) | MengramRetriever for RAG chains |
+| OpenClaw | [OpenClaw Plugin](/openclaw) | 12 tools, auto-recall, auto-capture |
+| Claude Code | [Claude Code](/claude-code) | Full memory loop with hooks |
+| MCP Server | [MCP Server](/mcp-server) | 29 tools for Claude Desktop, Cursor, Windsurf |
+| n8n | [n8n Integration](/n8n) | HTTP nodes for any workflow |
+
+## REST API
+
+For agents built with raw HTTP calls:
+
+```bash
+# Save agent conversation
+curl -X POST https://mengram.io/v1/add \
+  -H "Authorization: Bearer om-your-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "Deploy to staging"},
+      {"role": "assistant", "content": "Deployed v2.15. All tests passed."}
+    ],
+    "agent_id": "devops-agent",
+    "run_id": "run-77"
+  }'
+
+# Recall before next run
+curl -X POST https://mengram.io/v1/search \
+  -H "Authorization: Bearer om-your-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "staging deployment issues",
+    "agent_id": "devops-agent",
+    "limit": 5
+  }'
+```
+
+<Tip>
+For the full API reference with all endpoints and parameters, see [API Reference](/api-reference).
+</Tip>
