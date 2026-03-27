@@ -48,6 +48,8 @@ curl -X POST https://mengram.io/v1/add \
 | `run_id` | string | null | Session/run identifier |
 | `app_id` | string | null | Application identifier |
 | `expiration_date` | string | null | ISO datetime — facts auto-expire after this |
+| `source` | string | null | Provenance source (e.g. `"discord"`, `"slack"`, `"email"`, `"api"`) |
+| `metadata` | object | null | Arbitrary provenance metadata (stored on entities and facts) |
 
 Response: `{"status": "accepted", "job_id": "job-..."}`
 
@@ -56,10 +58,10 @@ Response: `{"status": "accepted", "job_id": "job-..."}`
 Add memories from plain text instead of chat messages.
 
 ```json
-{"text": "Meeting notes: migrating to PostgreSQL 16", "user_id": "default"}
+{"text": "Meeting notes: migrating to PostgreSQL 16", "user_id": "default", "source": "slack", "metadata": {"channel": "#engineering"}}
 ```
 
-Same optional parameters as `/v1/add`.
+Same optional parameters as `/v1/add` (including `source` and `metadata`).
 
 ### POST /v1/add_file
 
@@ -118,7 +120,9 @@ Get all memories with full facts, relations, and knowledge in a single request.
 
 ### GET /v1/memory/:name
 
-Get details for a specific entity including facts, relations, and knowledge.
+Get details for a specific entity including facts, relations, knowledge, and metadata.
+
+Response includes a `metadata` object with provenance information (source, agent_id, etc.).
 
 ### DELETE /v1/memory/:name
 

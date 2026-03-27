@@ -70,6 +70,8 @@ const result = await m.add([
     agentId: 'support-bot',
     appId: 'production',
     expirationDate: '2027-01-01T00:00:00Z',
+    source: 'slack',                          // provenance source
+    metadata: { channel: '#engineering' },     // arbitrary metadata
 });
 // { status: 'accepted', job_id: 'job-...' }
 ```
@@ -81,6 +83,8 @@ Add memories from plain text.
 ```javascript
 await m.addText('Meeting notes: decided to use Redis for caching', {
     userId: 'alice',
+    source: 'email',
+    metadata: { subject: 'Weekly sync' },
 });
 ```
 

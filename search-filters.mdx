@@ -39,6 +39,12 @@ results = m.search("issues", filters={
 
 # Also works with shorthand parameters
 results = m.search("config", agent_id="support-bot", app_id="prod")
+
+# Filter by provenance source
+results = m.search("meeting notes", filters={"source": "slack"})
+
+# Filter by custom metadata
+results = m.search("bugs", filters={"source": "discord", "channel": "#engineering"})
 ```
 
 ## Graph RAG (graph depth)

@@ -50,6 +50,13 @@ result = m.add([
 | `run_id` | str | None | Session/run identifier |
 | `app_id` | str | None | Application identifier |
 | `expiration_date` | str | None | ISO datetime — facts auto-expire |
+| `source` | str | None | Provenance source (e.g. `"discord"`, `"slack"`, `"email"`) |
+| `metadata` | dict | None | Arbitrary provenance metadata |
+
+```python
+# With provenance tracking
+m.add(messages, source="slack", metadata={"channel": "#engineering"})
+```
 
 ### add_text(text, ...)
 
@@ -57,6 +64,9 @@ Add memories from plain text instead of chat messages.
 
 ```python
 m.add_text("Meeting notes: decided to migrate to PostgreSQL 16")
+
+# With provenance
+m.add_text("Bug fix deployed", source="discord", metadata={"server": "dev-team"})
 ```
 
 Same parameters as `add()` except `text` instead of `messages`.
