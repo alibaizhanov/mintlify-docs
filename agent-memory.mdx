@@ -98,26 +98,29 @@ m.procedure_feedback(proc_id, success=False,
 
 ## Agent mode extraction
 
-By default, Mengram only extracts facts from the **user** role — assistant responses are treated as context only. For agents, you often want to remember **what the assistant did** too.
+By default, Mengram only extracts facts from the **user** role — assistant responses are treated as context only.
 
-Set `agent_mode=True` to extract from all speakers:
+When you pass `agent_id`, Mengram automatically switches to **full extraction** — remembering both what the user asked and what the agent did:
 
 ```python
+# agent_id triggers full extraction automatically
 m.add([
     {"role": "user", "content": "Deploy to staging"},
     {"role": "assistant", "content": "Deployed v2.15 to staging. All health checks passed."},
-], agent_id="devops-agent", agent_mode=True)
-# Extracts facts from BOTH user request and assistant actions
+], agent_id="devops-agent")
+# Extracts from BOTH user request and assistant actions
 ```
 
 ```javascript
-await m.add(messages, { agentId: 'devops-agent', agentMode: true });
+await m.add(messages, { agentId: 'devops-agent' });
+// Full extraction — no extra flags needed
 ```
 
-| Mode | Extracts from | Best for |
-|------|--------------|----------|
-| Default (`false`) | User messages only | Chatbots, personal assistants |
-| Agent mode (`true`) | All speakers | AI agents, autonomous workflows |
+| Scenario | Extracts from | How |
+|----------|--------------|-----|
+| No `agent_id` | User messages only | Default for chatbots |
+| With `agent_id` | All speakers | Automatic for agents |
+| Override | Your choice | Set `agent_mode=False` to force user-only even with `agent_id` |
 
 ## Multi-agent systems
 

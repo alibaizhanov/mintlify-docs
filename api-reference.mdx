@@ -50,7 +50,7 @@ curl -X POST https://mengram.io/v1/add \
 | `expiration_date` | string | null | ISO datetime — facts auto-expire after this |
 | `source` | string | null | Provenance source (e.g. `"discord"`, `"slack"`, `"email"`, `"api"`) |
 | `metadata` | object | null | Arbitrary provenance metadata (stored on entities and facts) |
-| `agent_mode` | boolean | false | Extract from all speakers (user + assistant). Default extracts user-only. |
+| `agent_mode` | boolean | false | Extract from all speakers (user + assistant). **Auto-enabled when `agent_id` is set.** |
 
 Response: `{"status": "accepted", "job_id": "job-..."}`
 

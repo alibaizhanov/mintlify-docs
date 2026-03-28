@@ -52,7 +52,7 @@ result = m.add([
 | `expiration_date` | str | None | ISO datetime — facts auto-expire |
 | `source` | str | None | Provenance source (e.g. `"discord"`, `"slack"`, `"email"`) |
 | `metadata` | dict | None | Arbitrary provenance metadata |
-| `agent_mode` | bool | False | Extract from all speakers (user + assistant). Default extracts user-only. |
+| `agent_mode` | bool | False | Extract from all speakers (user + assistant). **Auto-enabled when `agent_id` is set.** |
 
 ```python
 # With provenance tracking
