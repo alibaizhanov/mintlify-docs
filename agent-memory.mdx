@@ -96,6 +96,29 @@ m.procedure_feedback(proc_id, success=False,
 # Next time, the agent gets the updated procedure
 ```
 
+## Agent mode extraction
+
+By default, Mengram only extracts facts from the **user** role — assistant responses are treated as context only. For agents, you often want to remember **what the assistant did** too.
+
+Set `agent_mode=True` to extract from all speakers:
+
+```python
+m.add([
+    {"role": "user", "content": "Deploy to staging"},
+    {"role": "assistant", "content": "Deployed v2.15 to staging. All health checks passed."},
+], agent_id="devops-agent", agent_mode=True)
+# Extracts facts from BOTH user request and assistant actions
+```
+
+```javascript
+await m.add(messages, { agentId: 'devops-agent', agentMode: true });
+```
+
+| Mode | Extracts from | Best for |
+|------|--------------|----------|
+| Default (`false`) | User messages only | Chatbots, personal assistants |
+| Agent mode (`true`) | All speakers | AI agents, autonomous workflows |
+
 ## Multi-agent systems
 
 Multiple agents can share the same memory pool or be isolated:

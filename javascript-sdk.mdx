@@ -72,6 +72,7 @@ const result = await m.add([
     expirationDate: '2027-01-01T00:00:00Z',
     source: 'slack',                          // provenance source
     metadata: { channel: '#engineering' },     // arbitrary metadata
+    agentMode: true,                           // extract from all speakers (user + assistant)
 });
 // { status: 'accepted', job_id: 'job-...' }
 ```
