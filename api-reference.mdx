@@ -633,6 +633,31 @@ Too many requests. Retry after the `Retry-After` header value.
 
 ---
 
+## Response Headers
+
+Every authenticated response includes rate limit and quota usage headers.
+
+### Rate Limiting
+
+| Header | Description |
+|--------|-------------|
+| `X-RateLimit-Limit` | Requests allowed per minute |
+| `X-RateLimit-Remaining` | Requests remaining this minute |
+| `X-RateLimit-Reset` | Seconds until rate limit resets |
+
+### Quota Usage
+
+| Header | Description |
+|--------|-------------|
+| `X-Quota-Add-Used` | Add calls used this month |
+| `X-Quota-Add-Limit` | Add calls allowed this month |
+| `X-Quota-Search-Used` | Search calls used this month |
+| `X-Quota-Search-Limit` | Search calls allowed this month |
+
+SDKs expose quota headers via the `.quota` property — see [Python SDK](/python-sdk#quota-usage) and [JavaScript SDK](/javascript-sdk#quota-usage).
+
+---
+
 ## Health
 
 ### GET /v1/health

@@ -404,3 +404,23 @@ try {
     }
 }
 ```
+
+---
+
+## Quota Usage
+
+After any API call, check your current quota usage via the `.quota` property:
+
+```javascript
+await m.search('test');
+console.log(m.quota);
+// { add: { used: 5, limit: 30 }, search: { used: 12, limit: 100 } }
+
+// Check before hitting the wall
+const { search } = m.quota;
+if (search && search.used >= search.limit * 0.8) {
+    console.warn('Warning: approaching search quota limit');
+}
+```
+
+The quota is read from response headers (`X-Quota-Add-Used`, `X-Quota-Add-Limit`, `X-Quota-Search-Used`, `X-Quota-Search-Limit`) and reflects usage at the time of the last API call.

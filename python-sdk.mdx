@@ -433,3 +433,21 @@ except QuotaExceededError as e:
 ### Retry Behavior
 
 The client automatically retries on transient errors (429, 502, 503, 504) with exponential backoff up to 3 attempts. **402 (quota exceeded) is never retried.**
+
+---
+
+## Quota Usage
+
+After any API call, check your current quota usage via the `.quota` property:
+
+```python
+m.search("test")
+print(m.quota)
+# {"add": {"used": 5, "limit": 30}, "search": {"used": 12, "limit": 100}}
+
+# Check before hitting the wall
+if m.quota.get("search", {}).get("used", 0) >= m.quota.get("search", {}).get("limit", 1) * 0.8:
+    print("Warning: approaching search quota limit")
+```
+
+The quota is read from response headers (`X-Quota-Add-Used`, `X-Quota-Add-Limit`, `X-Quota-Search-Used`, `X-Quota-Search-Limit`) and reflects usage at the time of the last API call.
