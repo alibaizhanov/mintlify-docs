@@ -29,21 +29,70 @@ This starts three services:
 ## Verify it's running
 
 ```bash
-curl http://localhost:8420/health
-# {"status": "ok"}
+curl http://localhost:8420/v1/health
+# {"status": "ok", "version": "2.22.0"}
 ```
+
+<Note>
+Both `/health` and `/v1/health` work.
+</Note>
+
+## Create your first account
+
+By default, Mengram requires email verification via [Resend](https://resend.com). For self-hosting without an email provider, set `DISABLE_EMAIL_VERIFICATION=true`:
+
+```yaml
+environment:
+  DISABLE_EMAIL_VERIFICATION: "true"
+```
+
+With this enabled, the signup endpoint returns your API key immediately — no verification code needed.
+
+<Tip>
+If you prefer to keep email verification, set `RESEND_API_KEY` and `EMAIL_FROM` (see Configuration below). Without Resend, verification codes are logged to stdout — check `docker compose logs mengram` to find them.
+</Tip>
 
 ## Configuration
 
 Environment variables in `docker-compose.yml`:
 
+### Required
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPENAI_API_KEY` | required | OpenAI API key for embeddings and LLM |
+
+### Core
+
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql://mengram:mengram@postgres:5432/mengram` | PostgreSQL connection string |
 | `REDIS_URL` | `redis://redis:6379` | Redis connection string |
-| `OPENAI_API_KEY` | required | OpenAI API key for embeddings and LLM |
 | `LLM_PROVIDER` | `openai` | LLM provider (`openai`, `anthropic`, `ollama`) |
 | `LLM_MODEL` | `gpt-4o-mini` | Model for memory extraction |
+| `BASE_URL` | `https://mengram.io` | Your instance's public URL (used in emails, OAuth redirects) |
+
+### Self-hosting
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DISABLE_EMAIL_VERIFICATION` | `false` | Skip email verification on signup — returns API key directly |
+| `RESEND_API_KEY` | _(optional)_ | [Resend](https://resend.com) API key for sending emails |
+| `EMAIL_FROM` | `Mengram <onboarding@resend.dev>` | Sender address for emails |
+
+### GitHub OAuth (optional)
+
+GitHub login is optional — email signup works without it.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GITHUB_CLIENT_ID` | _(optional)_ | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | _(optional)_ | GitHub OAuth App client secret |
+
+To enable GitHub login:
+1. Create a GitHub OAuth App at [github.com/settings/developers](https://github.com/settings/developers)
+2. Set the callback URL to `http://your-host:8420/auth/github/callback`
+3. Add both env vars to your `docker-compose.yml`
 
 ## Use with Ollama (fully local)
 
@@ -72,6 +121,66 @@ environment:
   OPENAI_API_BASE: http://host.docker.internal:1234/v1
 ```
 
+## Use with OpenRouter
+
+```yaml
+environment:
+  LLM_PROVIDER: openai
+  LLM_MODEL: qwen/qwen3.6-plus:free
+  OPENAI_API_KEY: sk-or-v1-your-key
+  OPENAI_BASE_URL: https://openrouter.ai/api/v1
+```
+
+## Connect your tools
+
+### MCP server (Claude Desktop, Cursor, Windsurf)
+
+```json
+{
+  "mcpServers": {
+    "mengram": {
+      "command": "uvx",
+      "args": ["mengram-ai"],
+      "env": {
+        "MENGRAM_API_KEY": "om-your-key",
+        "MENGRAM_URL": "http://localhost:8420"
+      }
+    }
+  }
+}
+```
+
+### VS Code extension
+
+1. Install the **Mengram** extension from the marketplace
+2. Open Settings and set:
+   - `mengram.apiKey` → your API key
+   - `mengram.baseUrl` → `http://localhost:8420`
+
+### Claude Code hooks
+
+```bash
+export MENGRAM_API_KEY=om-your-key
+export MENGRAM_URL=http://localhost:8420
+mengram hook install
+```
+
+### Python SDK
+
+```python
+from mengram import Mengram
+
+m = Mengram(api_key="om-your-key", base_url="http://localhost:8420")
+```
+
+### JavaScript SDK
+
+```javascript
+import { MengramClient } from 'mengram-ai';
+
+const m = new MengramClient('om-your-key', 'http://localhost:8420');
+```
+
 ## Data persistence
 
 PostgreSQL data is stored in a Docker volume (`pgdata`). Your memories persist across container restarts.
@@ -97,6 +206,7 @@ For production, consider:
 - Set strong database passwords
 - Put behind a reverse proxy with TLS (nginx, Caddy)
 - Set `GUNICORN_WORKERS` for concurrency
+- Set `BASE_URL` to your public domain
 
 <Tip>
 The easiest way to deploy is [Railway](https://railway.app) — just connect your GitHub repo and set environment variables. Mengram's cloud version runs on Railway.
