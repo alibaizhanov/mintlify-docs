@@ -28,11 +28,28 @@ Sign up at [mengram.io](https://mengram.io/#signup) — free tier includes 30 ad
     }
   ],
   "tools": [
-    {"type": "agent_toolset_20260401"},
-    {"type": "mcp_toolset", "mcp_server_name": "mengram"}
+    {
+      "type": "agent_toolset_20260401",
+      "default_config": {
+        "enabled": true,
+        "permission_policy": {"type": "always_allow"}
+      }
+    },
+    {
+      "type": "mcp_toolset",
+      "mcp_server_name": "mengram",
+      "default_config": {
+        "enabled": true,
+        "permission_policy": {"type": "always_allow"}
+      }
+    }
   ]
 }
 ```
+
+<Warning>
+Set `permission_policy` to `always_allow` for the MCP toolset. The default (`always_ask`) requires manual tool confirmation via the API — without it, every memory tool call will time out.
+</Warning>
 
 ### 3. Store your API key in a vault
 
@@ -57,10 +74,14 @@ client.beta.vaults.credentials.create(
     },
 )
 
+# Create an environment (container config for the session)
+env = client.beta.environments.create(display_name="Default")
+
 # Create a session — Anthropic injects the token automatically
 session = client.beta.sessions.create(
     agent=agent.id,
     vault_ids=[vault.id],
+    environment_id=env.id,
 )
 ```
 
@@ -124,7 +145,8 @@ import anthropic
 
 client = anthropic.Anthropic()
 
-agent = client.agents.create(
+# Create the agent with Mengram MCP
+agent = client.beta.agents.create(
     name="support-agent",
     model="claude-sonnet-4-6",
     instructions="""You are a customer support agent with persistent memory.
@@ -144,8 +166,21 @@ After resolving issues:
         }
     ],
     tools=[
-        {"type": "agent_toolset_20260401"},
-        {"type": "mcp_toolset", "mcp_server_name": "mengram"}
+        {
+            "type": "agent_toolset_20260401",
+            "default_config": {
+                "enabled": True,
+                "permission_policy": {"type": "always_allow"}
+            }
+        },
+        {
+            "type": "mcp_toolset",
+            "mcp_server_name": "mengram",
+            "default_config": {
+                "enabled": True,
+                "permission_policy": {"type": "always_allow"}
+            }
+        }
     ]
 )
 
@@ -161,21 +196,32 @@ client.beta.vaults.credentials.create(
     },
 )
 
-# Create session — vault injects the API key automatically
+# Create environment and session
+env = client.beta.environments.create(display_name="Support")
 session = client.beta.sessions.create(
     agent=agent.id,
     vault_ids=[vault.id],
+    environment_id=env.id,
 )
 
 # Send a message — agent recalls past context automatically
-turn = client.beta.turns.create(
-    agent_id=agent.id,
+client.beta.sessions.events.send(
     session_id=session.id,
-    messages=[{
-        "role": "user",
-        "content": "I'm having trouble with my deployment again"
+    events=[{
+        "type": "user.message",
+        "content": [{"type": "text", "text": "I'm having trouble with my deployment again"}]
     }]
 )
+
+# Stream the response
+with client.beta.sessions.events.stream(session_id=session.id) as stream:
+    for event in stream:
+        if event.type == "agent.message":
+            for block in event.content:
+                if hasattr(block, "text"):
+                    print(block.text)
+        if event.type == "agent.turn_complete":
+            break
 ```
 
 ## Mengram vs Memory Stores
