@@ -42,6 +42,7 @@
             "group": "Integrations",
             "pages": [
               "claude-code",
+              "managed-agents",
               "openclaw",
               "mcp-server",
               "langchain",

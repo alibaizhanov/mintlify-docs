@@ -1,0 +1,188 @@
+---
+title: "Claude Managed Agents"
+description: "Give Claude Managed Agents persistent memory with Mengram's MCP server — 29 tools for semantic, episodic, and procedural memory."
+---
+
+## Overview
+
+[Claude Managed Agents](https://docs.anthropic.com/en/docs/agents/managed-agents) is Anthropic's hosted platform for running autonomous AI agents. Mengram connects via MCP to give your agents persistent memory across sessions — facts, events, and self-improving workflows.
+
+## Setup
+
+### 1. Get a Mengram API key
+
+Sign up at [mengram.io](https://mengram.io/#signup) — free tier includes 30 adds and 100 searches per month.
+
+### 2. Add Mengram to your agent definition
+
+```json
+{
+  "name": "my-agent",
+  "model": "claude-sonnet-4-6",
+  "instructions": "You are a helpful assistant with persistent memory.",
+  "mcp_servers": [
+    {
+      "type": "url",
+      "name": "mengram",
+      "url": "https://mengram.io/mcp/sse"
+    }
+  ],
+  "tools": [
+    {"type": "agent_toolset_20260401"},
+    {"type": "mcp_toolset", "mcp_server_name": "mengram"}
+  ]
+}
+```
+
+### 3. Store your API key in a vault
+
+Managed Agents use [vaults](https://docs.anthropic.com/en/docs/agents/managed-agents#vaults) for secrets. Create a vault with your Mengram API key and pass it when creating a session:
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+session = client.agents.sessions.create(
+    agent_id="your-agent-id",
+    vault_ids=["vault-with-mengram-key"]
+)
+```
+
+## Available tools
+
+Once connected, your agent gets **29 memory tools**:
+
+### Core Memory
+
+| Tool | Description |
+|------|-------------|
+| `remember` | Save conversation to memory — auto-extracts facts, events, procedures |
+| `remember_text` | Save plain text to memory |
+| `recall` | Semantic search through past memories |
+| `search` | Advanced structured search with relevance scores |
+| `search_all` | Unified search across all 3 memory types |
+| `timeline` | Search memory by time range |
+| `list_memories` | List all stored entities |
+
+### Procedural Learning
+
+| Tool | Description |
+|------|-------------|
+| `list_procedures` | Retrieve learned workflows with success/failure tracking |
+| `procedure_feedback` | Report outcomes — procedures evolve on failure |
+| `procedure_history` | View how a procedure evolved over time |
+
+### Context & Profile
+
+| Tool | Description |
+|------|-------------|
+| `context_for` | Get relevant context pack for a specific task |
+| `checkpoint` | Save a session checkpoint with key decisions |
+| `generate_rules_file` | Generate project rules from memory |
+
+### Knowledge Graph
+
+| Tool | Description |
+|------|-------------|
+| `get_graph` | Get all entities and relationships |
+| `get_entity` | Get details of a specific entity |
+| `merge_entities` | Merge duplicate entities |
+| `dedup` | Auto-find and merge duplicates |
+
+### Insights
+
+| Tool | Description |
+|------|-------------|
+| `reflect` | Trigger AI reflection on memories |
+| `get_reflections` | Get AI-generated insights and patterns |
+| `run_agents` | Run memory agents (curator, connector, digest) |
+
+<Tip>
+For the complete list of all 29 tools with parameters, see [MCP Server](/mcp-server).
+</Tip>
+
+## Example: Support agent
+
+```python
+import anthropic
+
+client = anthropic.Anthropic()
+
+agent = client.agents.create(
+    name="support-agent",
+    model="claude-sonnet-4-6",
+    instructions="""You are a customer support agent with persistent memory.
+
+At the start of each conversation:
+1. Use recall() to search for the customer's past interactions
+2. Use context_for() to get relevant procedures
+
+After resolving issues:
+1. Use remember() to save the conversation
+2. Use procedure_feedback() to report success/failure""",
+    mcp_servers=[
+        {
+            "type": "url",
+            "name": "mengram",
+            "url": "https://mengram.io/mcp/sse"
+        }
+    ],
+    tools=[
+        {"type": "agent_toolset_20260401"},
+        {"type": "mcp_toolset", "mcp_server_name": "mengram"}
+    ]
+)
+
+# Create session with vault containing MENGRAM_API_KEY
+session = client.agents.sessions.create(
+    agent_id=agent.id,
+    vault_ids=["mengram-vault"]
+)
+
+# Send a message — agent recalls past context automatically
+turn = client.agents.turns.create(
+    agent_id=agent.id,
+    session_id=session.id,
+    messages=[{
+        "role": "user",
+        "content": "I'm having trouble with my deployment again"
+    }]
+)
+```
+
+## Mengram vs Memory Stores
+
+Managed Agents include built-in [Memory Stores](https://docs.anthropic.com/en/docs/agents/memory-stores) (research preview). Here's how they compare:
+
+| Feature | Mengram | Memory Stores |
+|---------|---------|---------------|
+| Memory types | **3** (semantic + episodic + procedural) | 1 (text documents) |
+| Auto-extraction | Yes — pass conversations, get structured knowledge | No — manual text only |
+| Procedural learning | Yes — workflows evolve from failures | No |
+| Cognitive Profile | Yes — one-call system prompt generation | No |
+| Knowledge graph | Yes | No |
+| Semantic search | Yes | Yes |
+| Multi-user isolation | Yes (`user_id` parameter) | Per-agent only |
+| Works beyond Anthropic | Yes (any LLM, any framework) | Managed Agents only |
+| Status | **Production** | Research preview |
+
+## Self-hosted
+
+If you're self-hosting Mengram, point the MCP URL to your instance:
+
+```json
+{
+  "type": "url",
+  "name": "mengram",
+  "url": "http://your-host:8420/mcp/sse"
+}
+```
+
+See [Self-hosting guide](/self-hosting) for setup instructions.
+
+## Next steps
+
+- [Agent Memory concepts](/agent-memory) — `agent_id`, `run_id`, procedural learning
+- [MCP Server reference](/mcp-server) — all 29 tools with parameters
+- [Python SDK](/python-sdk) — if you prefer direct API integration over MCP
