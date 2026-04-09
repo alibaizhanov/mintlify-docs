@@ -36,16 +36,31 @@ Sign up at [mengram.io](https://mengram.io/#signup) — free tier includes 30 ad
 
 ### 3. Store your API key in a vault
 
-Managed Agents use [vaults](https://docs.anthropic.com/en/docs/agents/managed-agents#vaults) for secrets. Create a vault with your Mengram API key and pass it when creating a session:
+Managed Agents use [vaults](https://docs.anthropic.com/en/docs/agents/managed-agents#vaults) for secrets. Create a vault, add your Mengram API key as a `static_bearer` credential, then pass the vault when creating a session:
 
 ```python
 import anthropic
 
 client = anthropic.Anthropic()
 
-session = client.agents.sessions.create(
-    agent_id="your-agent-id",
-    vault_ids=["vault-with-mengram-key"]
+# Create a vault for this user
+vault = client.beta.vaults.create(display_name="My User")
+
+# Add Mengram API key as a credential
+client.beta.vaults.credentials.create(
+    vault_id=vault.id,
+    display_name="Mengram Memory",
+    auth={
+        "type": "static_bearer",
+        "mcp_server_url": "https://mengram.io/mcp/sse",
+        "token": "om-your-mengram-api-key",
+    },
+)
+
+# Create a session — Anthropic injects the token automatically
+session = client.beta.sessions.create(
+    agent=agent.id,
+    vault_ids=[vault.id],
 )
 ```
 
@@ -134,14 +149,26 @@ After resolving issues:
     ]
 )
 
-# Create session with vault containing MENGRAM_API_KEY
-session = client.agents.sessions.create(
-    agent_id=agent.id,
-    vault_ids=["mengram-vault"]
+# Store Mengram API key in a vault
+vault = client.beta.vaults.create(display_name="Customer")
+client.beta.vaults.credentials.create(
+    vault_id=vault.id,
+    display_name="Mengram Memory",
+    auth={
+        "type": "static_bearer",
+        "mcp_server_url": "https://mengram.io/mcp/sse",
+        "token": "om-your-mengram-api-key",
+    },
+)
+
+# Create session — vault injects the API key automatically
+session = client.beta.sessions.create(
+    agent=agent.id,
+    vault_ids=[vault.id],
 )
 
 # Send a message — agent recalls past context automatically
-turn = client.agents.turns.create(
+turn = client.beta.turns.create(
     agent_id=agent.id,
     session_id=session.id,
     messages=[{
