@@ -70,6 +70,8 @@ Environment variables in `docker-compose.yml`:
 | `REDIS_URL` | `redis://redis:6379` | Redis connection string |
 | `LLM_PROVIDER` | `openai` | LLM provider (`openai`, `anthropic`, `ollama`) |
 | `LLM_MODEL` | `gpt-4o-mini` | Model for memory extraction |
+| `EMBEDDING_PROVIDER` | `openai` | Embedding provider (`openai` or `cohere`). See [Multilingual support](#multilingual-support-cohere) below. |
+| `COHERE_API_KEY` | _(required if cohere)_ | Cohere API key — needed when `EMBEDDING_PROVIDER=cohere` |
 | `BASE_URL` | `https://mengram.io` | Your instance's public URL (used in emails, OAuth redirects) |
 
 ### Self-hosting
@@ -93,6 +95,24 @@ To enable GitHub login:
 1. Create a GitHub OAuth App at [github.com/settings/developers](https://github.com/settings/developers)
 2. Set the callback URL to `http://your-host:8420/auth/github/callback`
 3. Add both env vars to your `docker-compose.yml`
+
+## Multilingual support (Cohere)
+
+Mengram cloud uses Cohere `embed-multilingual-v3.0` for native quality across 23 languages — Russian, Chinese, Spanish, Japanese, Korean, Arabic, and more. To use the same on a self-hosted instance:
+
+```yaml
+environment:
+  EMBEDDING_PROVIDER: cohere
+  COHERE_API_KEY: your-cohere-key
+```
+
+Get a Cohere API key at [dashboard.cohere.com](https://dashboard.cohere.com). The trial tier is free and rate-limited — sufficient for development and small workloads.
+
+<Tip>
+Stick with the default `EMBEDDING_PROVIDER=openai` (uses `text-embedding-3-large`, 1536 dim) if your data is mostly English. Switch to Cohere if you have non-English users or need cross-lingual retrieval (e.g. English queries finding Russian documents).
+</Tip>
+
+Embeddings are written to a separate `embedding_v2` column (1024 dim) so you can switch providers without losing existing data — Mengram routes search to the right column based on query vector size.
 
 ## Use with Ollama (fully local)
 

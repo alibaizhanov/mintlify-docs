@@ -174,6 +174,69 @@ Response:
 }
 ```
 
+### POST /v1/ask
+
+<Tip>**Pro / Growth / Business only.** Free and Starter plans return 403.</Tip>
+
+Ask your memory a question and get a synthesized answer with citations — not a raw fact list. Mengram embeds the query, retrieves the top relevant facts, and uses Cohere Chat (`command-a-03-2025`) to write a grounded answer with native source attribution.
+
+Counts as 1 search against your monthly quota.
+
+```bash
+curl -X POST https://mengram.io/v1/ask \
+  -H "Authorization: Bearer om-..." \
+  -H "Content-Type: application/json" \
+  -d '{"query": "what programming languages do I use?", "user_id": "default"}'
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `query` | string | required | Natural language question |
+| `user_id` | string | `"default"` | User whose memories to use |
+| `max_facts` | int | 15 | How many top facts to feed Cohere as documents (capped at 30 internally) |
+
+Response:
+
+```json
+{
+  "answer": "You use Python and Rust. Python is your daily language and Rust is your favorite. You also use Java for enterprise systems.",
+  "citations": [
+    {
+      "text": "Python and Rust",
+      "start": 8,
+      "end": 23,
+      "sources": [
+        {"entity": "Python", "fact": "uses Python daily for backend development"},
+        {"entity": "Rust", "fact": "Rust is favorite language"}
+      ]
+    },
+    {
+      "text": "Java for enterprise systems",
+      "start": 92,
+      "end": 119,
+      "sources": [
+        {"entity": "Ali Baizhanov", "fact": "specializes in Java/Spring Boot for enterprise"}
+      ]
+    }
+  ],
+  "facts_used": 22
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `answer` | string | Synthesized answer text. Empty string if Cohere can't answer from retrieved facts. |
+| `citations` | array | Citation objects linking spans of `answer` back to specific facts. May be empty. |
+| `citations[].text` | string | The cited substring as it appears in `answer` |
+| `citations[].start` | int | Start character offset in `answer` |
+| `citations[].end` | int | End character offset in `answer` |
+| `citations[].sources` | array | Facts that support this citation (entity name + fact text) |
+| `facts_used` | int | How many facts were passed to Cohere (capped at 30) |
+
+**When `answer` is empty / `citations` is empty:** Cohere chose not to answer from the retrieved facts (e.g. no relevant data, or query was ambiguous). This is **not an error** — it's an honest "I don't know" rather than a hallucinated response.
+
+**Multilingual:** Works natively across all 23 supported languages. Russian/Chinese/Japanese/Spanish queries return answers in the query language with citations to the original (often English) facts.
+
 ### GET /v1/timeline
 
 Temporal search — find facts within a time range.
