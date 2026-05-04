@@ -5,61 +5,123 @@ description: "Use Mengram as a Model Context Protocol server with Claude Desktop
 
 ## What is MCP?
 
-Model Context Protocol (MCP) lets AI clients like Claude Desktop, Cursor, and Windsurf connect to external tools. Mengram's MCP server gives these clients persistent memory — semantic, episodic, and procedural.
+Model Context Protocol (MCP) lets AI clients like Claude Desktop, Cursor, Continue.dev, and Windsurf connect to external tools. Mengram's MCP server gives these clients persistent memory — semantic, episodic, and procedural.
+
+## Prerequisites
+
+The MCP config below uses the local `mengram` CLI. Install it once and find its path — you'll need that path in the configs below.
+
+<Steps>
+  <Step title="Install the CLI">
+    ```bash
+    pip install mengram-ai
+    ```
+  </Step>
+  <Step title="Find the mengram path">
+    <Tabs>
+      <Tab title="macOS / Linux">
+        ```bash
+        which mengram
+        ```
+      </Tab>
+      <Tab title="Windows (PowerShell)">
+        ```powershell
+        (Get-Command mengram).Source
+        ```
+      </Tab>
+      <Tab title="Windows (cmd)">
+        ```cmd
+        where mengram
+        ```
+      </Tab>
+    </Tabs>
+    Use the printed path as `command` in the configs below — replace `/path/to/mengram` with it.
+  </Step>
+</Steps>
 
 ## Setup with Claude Desktop
 
-Add to your Claude Desktop config (`claude_desktop_config.json`):
+Open **Settings → Developer → Edit Config**, then add:
 
 ```json
 {
   "mcpServers": {
     "mengram": {
-      "command": "uvx",
-      "args": ["mengram-ai"],
+      "command": "/path/to/mengram",
+      "args": ["server", "--cloud"],
       "env": {
-        "MENGRAM_API_KEY": "om-your-key"
+        "MENGRAM_API_KEY": "om-your-key",
+        "MENGRAM_URL": "https://mengram.io"
       }
     }
   }
 }
 ```
+
+Restart Claude Desktop after saving.
 
 ## Setup with Cursor
 
-Add to Cursor's MCP settings (`.cursor/mcp.json`):
+Add to Cursor's MCP settings (`~/.cursor/mcp.json`), or open **Settings → Cursor Settings → MCP**:
 
 ```json
 {
   "mcpServers": {
     "mengram": {
-      "command": "uvx",
-      "args": ["mengram-ai"],
+      "command": "/path/to/mengram",
+      "args": ["server", "--cloud"],
       "env": {
-        "MENGRAM_API_KEY": "om-your-key"
+        "MENGRAM_API_KEY": "om-your-key",
+        "MENGRAM_URL": "https://mengram.io"
       }
     }
   }
 }
 ```
+
+Restart Cursor.
+
+## Setup with Continue.dev
+
+Continue stores each MCP server as a separate YAML file. Create `.continue/mcpServers/mengram.yaml` at the top level of your workspace:
+
+```yaml
+name: Mengram
+version: 0.0.1
+schema: v1
+mcpServers:
+  - name: mengram
+    command: /path/to/mengram
+    args:
+      - server
+      - --cloud
+    env:
+      MENGRAM_API_KEY: om-your-key
+      MENGRAM_URL: https://mengram.io
+```
+
+Reload the Continue extension (or restart your IDE). Continue will auto-pick it up.
 
 ## Setup with Windsurf
 
-Add to Windsurf's MCP settings:
+Edit `~/.codeium/windsurf/mcp_config.json` (or open **Settings → Cascade → MCP** in the IDE):
 
 ```json
 {
   "mcpServers": {
     "mengram": {
-      "command": "uvx",
-      "args": ["mengram-ai"],
+      "command": "/path/to/mengram",
+      "args": ["server", "--cloud"],
       "env": {
-        "MENGRAM_API_KEY": "om-your-key"
+        "MENGRAM_API_KEY": "om-your-key",
+        "MENGRAM_URL": "https://mengram.io"
       }
     }
   }
 }
 ```
+
+Restart Windsurf.
 
 ## Available Tools
 
