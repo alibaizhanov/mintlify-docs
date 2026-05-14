@@ -7,6 +7,20 @@ description: "Use Mengram as a Model Context Protocol server with Claude Desktop
 
 Model Context Protocol (MCP) lets AI clients like Claude Desktop, Cursor, Continue.dev, and Windsurf connect to external tools. Mengram's MCP server gives these clients persistent memory — semantic, episodic, and procedural.
 
+## Fastest setup — paste one prompt into your agent
+
+If you have a coding agent (Claude Desktop, Cursor, Codex, Claude Code, Windsurf), skip the manual steps below. Paste this prompt:
+
+```
+Install Mengram for me. Fetch the canonical install
+guide at https://mengram.io/agent-install.txt and
+follow it precisely. My email is YOUR_EMAIL_HERE.
+```
+
+The agent reads our [install guide](/agent-install), installs the package, configures the MCP server in its host, and runs `mengram doctor` to verify the round-trip. See [Agent-Native Install](/agent-install) for the full breakdown.
+
+The rest of this page is the **manual** setup if you'd rather wire it up yourself.
+
 ## Prerequisites
 
 The MCP config below uses the local `mengram` CLI. Install it once and find its path — you'll need that path in the configs below.

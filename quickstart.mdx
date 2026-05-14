@@ -3,9 +3,25 @@ title: "Quickstart"
 description: "Get your API key and add your first memory in under 2 minutes."
 ---
 
+## Fastest path — paste one prompt into your agent
+
+If you have a coding agent (Claude Desktop, Cursor, Claude Code, Codex, Windsurf), skip the manual steps entirely. Paste this prompt:
+
+```
+Install Mengram for me. Fetch the canonical install
+guide at https://mengram.io/agent-install.txt and
+follow it precisely. My email is YOUR_EMAIL_HERE.
+```
+
+The agent reads our [install guide](/agent-install), runs `pip install`, signs you up, configures the MCP server in its host, and verifies the install end-to-end with `mengram doctor`. Walk away — it tells you when it's done.
+
+Want to do it manually? Continue below.
+
 ## 1. Get an API key
 
 Sign up at [mengram.io](https://mengram.io/#signup) to get your free API key. It starts with `om-`.
+
+You can also do it from the terminal — `mengram signup --email you@example.com` sends a 6-digit code; `mengram signup --email you@example.com --code 123456` exchanges it for a key and saves it to `~/.mengram/config.json`.
 
 ## 2. Install the SDK
 
@@ -96,6 +112,14 @@ This installs 3 hooks:
 - **Auto-save** — captures conversations in the background
 
 Claude Code remembers you across sessions automatically. See [Claude Code Integration](/claude-code) for details.
+
+## 7. Verify the install end-to-end
+
+```bash
+mengram doctor
+```
+
+Runs an auth + add + search round-trip against the cloud API. Final line is `OK: round-trip succeeded.` on success, or `FAIL: <reason>` with a fix-it hint.
 
 <Tip>
 Use the environment variable `MENGRAM_API_KEY` so you don't have to pass the key every time: `m = Mengram()`

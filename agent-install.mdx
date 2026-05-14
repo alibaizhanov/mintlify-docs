@@ -1,0 +1,97 @@
+---
+title: "Agent-Native Install"
+description: "Install Mengram via a single prompt to your coding agent. No terminal context-switching, no config-file editing."
+---
+
+## The idea
+
+Modern coding agents (Claude Desktop, Cursor, Claude Code, Codex, Windsurf) have shell, file-edit, and web-fetch tools. They can install software, edit config files, and verify the result themselves.
+
+Instead of giving the user a list of commands to run, we ship a plain-text install guide written **for the agent**. The user pastes one prompt; the agent does the rest.
+
+## The prompt
+
+```
+Install Mengram for me. Fetch the canonical install
+guide at https://mengram.io/agent-install.txt and
+follow it precisely. My email is YOUR_EMAIL_HERE.
+```
+
+Paste it into your agent. The agent will:
+
+1. Detect your OS and which AI tool it's running in
+2. Run `pip install --user --upgrade mengram-ai`
+3. Trigger `mengram signup --email <you>` — a 6-digit code arrives by email
+4. Ask you for the code, then run `mengram signup --email <you> --code <code>` to save your API key to `~/.mengram/config.json`
+5. Add a `"mengram"` entry to the host's MCP config (preserving everything else)
+6. Run `mengram doctor` — auth + add + search round-trip
+7. Tell you to restart the host
+
+End-to-end install in 30-60 seconds, no terminal context-switch.
+
+## The guide itself
+
+The install guide is plain text at [`https://mengram.io/agent-install.txt`](https://mengram.io/agent-install.txt). It's structured for LLMs:
+
+- **STEP 1** — Detect environment (OS, Python ≥ 3.10, host AI tool)
+- **STEP 2** — Install package + PATH fix
+- **STEP 3** — Authenticate (skip if `$MENGRAM_API_KEY` already set)
+- **STEP 4** — Configure MCP server. Decision tree per host: claude-desktop, claude-code, cursor, windsurf, codex, claude-ai (web), generic
+- **STEP 5** — `mengram doctor` round-trip
+- **STEP 6** — Final report to user
+- **SECTION M** — Manual fallback if the agent has no shell tool
+- **APPENDIX A** — JSON config template
+- **APPENDIX B** — Debugging notes
+
+## Supported hosts
+
+| Host | Path | Notes |
+|---|---|---|
+| **Claude Desktop** (`.app`) | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) | Local stdio MCP — lowest latency, no Node.js |
+| **Claude Code** (CLI) | `claude mcp add mengram -- mengram server --cloud` | Native MCP support |
+| **Cursor** | `~/.cursor/mcp.json` | Same JSON shape as Claude Desktop |
+| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | Same JSON shape |
+| **Codex** (CLI) | `~/.codex/config.toml` | TOML format |
+| **Claude.ai web / Chrome** | Settings → Connectors → Add custom connector | HTTP MCP via UI — agent can't install programmatically, gives instructions |
+| **Other** (generic MCP) | Host's MCP config | Falls back to URL + Authorization header for HTTP, or stdio command |
+
+## Why this exists
+
+Karpathy's recent observation: *"Why are people still telling me what to do? What is the thing I should copy-paste to my agent?"*
+
+Mengram's install paradigm is the answer for memory infrastructure. The agent does the work. The user does the talking.
+
+This also lets your install live as **one source of truth** — `agent-install.txt` is the canonical source. Update it once, every coding agent on the planet picks up the new version on the next install.
+
+## Manual install (if you don't have an agent)
+
+Skip to [Quickstart](/quickstart) for the conventional `pip install` + `mengram setup` flow.
+
+## What gets installed
+
+After a successful run:
+
+- `mengram-ai` Python package (`pip --user`)
+- `~/.mengram/config.json` with your API key (chmod 600)
+- `$MENGRAM_API_KEY` exported in `~/.zshrc` (or `~/.bashrc`)
+- `"mengram"` entry in your host's MCP config, pointing to `mengram server --cloud`
+- 30 MCP tools available in your host: `recall`, `remember`, `search`, `timeline`, `reflect`, `dedup`, `get_graph`, and 23 more
+
+## Verify
+
+```bash
+mengram doctor
+```
+
+Final line is `OK: round-trip succeeded.` on success, or `FAIL: <reason>` with a fix.
+
+## Troubleshooting
+
+**Agent can't find the `mengram` command after install.**
+The user's `pip --user` script directory isn't on PATH. Run `python3 -m site --user-base`; append `<that>/bin` to your shell profile.
+
+**`Could not attach to MCP server mengram` in Claude Desktop.**
+Check `~/Library/Logs/Claude/mcp-server-mengram.log`. Most common cause: an old Python without `mcp` installed. Run `mengram doctor` — it pre-checks `import mcp` before the round-trip.
+
+**`SSL: CERTIFICATE_VERIFY_FAILED`.**
+You're on `mengram-ai` < 2.25.3, which used the default urllib SSL context. Upgrade: `pip install --user --upgrade mengram-ai`.
