@@ -46,6 +46,7 @@
               "managed-agents",
               "openclaw",
               "mcp-server",
+              "vapi",
               "langchain",
               "crewai",
               "n8n"

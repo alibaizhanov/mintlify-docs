@@ -644,6 +644,105 @@ Get current account info (email, plan, user_id).
 
 ---
 
+## Voice (Vapi)
+
+Webhook adapters that turn Vapi's tool-call and end-of-call events into Mengram memory operations. See the full guide at [Vapi Integration](/vapi).
+
+### POST /v1/voice/vapi/recall
+
+Called by Vapi as a custom tool. Returns a concise context string the assistant verbalizes at the start of a call.
+
+**Request body** (Vapi sends both shapes; either accepted):
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "toolCallList": [{
+      "id": "call_abc",
+      "name": "recall_caller",
+      "arguments": { "phone": "+15551234567" }
+    }],
+    "call": {
+      "customer": { "number": "+15551234567" }
+    }
+  }
+}
+```
+
+Or the OpenAI-nested form (`toolCalls` with `function.name` + `function.arguments` — the latter may arrive as a JSON string):
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "toolCalls": [{
+      "id": "call_abc",
+      "type": "function",
+      "function": {
+        "name": "recall_caller",
+        "arguments": "{\"phone\": \"+15551234567\"}"
+      }
+    }]
+  }
+}
+```
+
+**Phone resolution order:** tool arguments → `message.call.customer.number` → "Unknown caller" fallback.
+
+**Response** (200 — Vapi tool-result format, `result` MUST be a string):
+
+```json
+{
+  "results": [{
+    "toolCallId": "call_abc",
+    "result": "Known about caller (Sarah Johnson): Sarah Johnson: prefers morning slots before 11 AM | Sarah Johnson: gets anxiety with novocaine"
+  }]
+}
+```
+
+If `message.type` is anything other than `tool-calls` (Vapi sends many event types to the same server URL), the endpoint returns `200 {"status":"ignored","reason":"..."}` rather than 4xx — so the assistant isn't marked broken when lifecycle events arrive.
+
+**Quota:** 1 search per call.
+
+### POST /v1/voice/vapi/save
+
+Called by Vapi at end of call. Routes the final transcript through Mengram's extraction pipeline, keyed per caller via `sub_user_id=voice:<E.164>`.
+
+**Request body:**
+
+```json
+{
+  "message": {
+    "type": "end-of-call-report",
+    "endedReason": "customer-ended-call",
+    "call": {
+      "id": "...",
+      "customer": { "number": "+15551234567" }
+    },
+    "transcript": "Agent: ...\nCaller: ..."
+  }
+}
+```
+
+The transcript can also live at `message.artifact.transcript` — Mengram reads whichever is present.
+
+**Response** (202 — extraction runs in the background like `/v1/add`):
+
+```json
+{
+  "status": "accepted",
+  "job_id": "job-xxxx",
+  "sub_user_id": "voice:+15551234567"
+}
+```
+
+**Only `end-of-call-report` triggers extraction.** Partial `transcript` events (Vapi streams these mid-call) and other lifecycle events are ignored with `{"status":"ignored"}` so the extraction pipeline doesn't fire repeatedly per call.
+
+**Quota:** 1 add per call.
+
+---
+
 ## Error Responses
 
 All endpoints return structured JSON errors.

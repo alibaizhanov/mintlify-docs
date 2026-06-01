@@ -1,0 +1,255 @@
+---
+title: "Vapi Voice Integration"
+description: "Persistent memory for Vapi voice agents — the assistant knows who's calling before saying a word. Drop-in webhook adapter, no glue code, no n8n."
+---
+
+## Overview
+
+[Vapi](https://vapi.ai) assistants are stateless across calls — when the same caller phones back next week, the agent starts from scratch and asks for their name and number again. Mengram's Vapi adapter solves this with two HTTP webhooks the assistant invokes at call start and call end.
+
+- **At call start** — the assistant calls a custom tool (`recall_caller`) with the caller's phone number. Mengram returns a concise summary of everything it knows about that caller.
+- **At call end** — Vapi posts the final transcript to a server URL. Mengram extracts entities, facts, and episodes, keyed to the caller's phone number.
+
+Per-caller isolation works out of the box: each phone number gets its own memory namespace via `sub_user_id=voice:<E.164>`. One Mengram account can power thousands of caller memories across multiple white-label clients.
+
+<Note>
+  Apache 2.0, free tier covers about 40 inbound calls/month. Paid tiers from $5/mo. Same retrieval stack as the rest of Mengram (hybrid vector + BM25 + RRF, Ebbinghaus decay, reflection cron).
+</Note>
+
+## Quick Setup
+
+You'll need a Mengram API key. Get one at [mengram.io](https://mengram.io) → sign up → Dashboard → Keys.
+
+### 1. Add the recall tool to your Vapi assistant
+
+In the Vapi dashboard, open your assistant → **Tools** → add a Custom Tool:
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "recall_caller",
+    "description": "Get what we know about this caller. Call at the start of every conversation.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "description": "Caller phone number in E.164 format"
+        }
+      },
+      "required": ["phone"]
+    }
+  },
+  "server": {
+    "url": "https://mengram.io/v1/voice/vapi/recall",
+    "headers": {
+      "Authorization": "Bearer YOUR_MENGRAM_KEY"
+    }
+  }
+}
+```
+
+The tool returns a single string the assistant verbalizes naturally. Real response:
+
+```json
+{
+  "results": [{
+    "toolCallId": "call_abc",
+    "result": "Known about caller (Sarah Johnson): Sarah Johnson: prefers morning slots before 11 AM | Sarah Johnson: gets anxiety with novocaine | Sarah Johnson: booked cleaning May 14"
+  }]
+}
+```
+
+### 2. Tell the assistant to call it first
+
+In your assistant's system prompt, add one paragraph:
+
+```
+At the start of every call, immediately call the recall_caller tool with
+the caller's phone number. Use what's returned to greet them naturally
+and reference past interactions. Don't ask for information you already have.
+```
+
+### 3. Wire the end-of-call save webhook
+
+Still in the assistant config, set the **Server URL** to:
+
+```
+https://mengram.io/v1/voice/vapi/save
+```
+
+Add the same `Authorization: Bearer YOUR_MENGRAM_KEY` header in the Server URL config.
+
+<Warning>
+  Vapi's Server URL receives **every** assistant event — `status-update`, partial `transcript` chunks, `conversation-update`, `end-of-call-report`, etc. Mengram's save endpoint filters internally and only triggers extraction on `end-of-call-report`. Everything else returns a benign 200. You can safely wire one Server URL for the whole assistant — no extra routing needed.
+</Warning>
+
+### 4. Test it
+
+Make a real test call to the assistant. After it hangs up, wait ~30–60s for extraction, then call back from the same number. The assistant should greet you with what it learned from the first call.
+
+## How It Works
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Call 1: New caller                                     │
+│  ↓ Vapi calls recall_caller("+15551234567")             │
+│  ↓ Mengram: "New caller — no prior context."            │
+│  ↓ Assistant: "Hi, who am I speaking with?"             │
+│  ↓ Caller talks, conversation flows                     │
+│  ↓ Vapi posts end-of-call-report to /v1/voice/vapi/save │
+│  ↓ Mengram extracts entities, facts, episodes           │
+│  ↓ Reflection cron consolidates patterns nightly        │
+│                                                         │
+│  Call 2: Same caller, days later                        │
+│  ↓ Vapi calls recall_caller("+15551234567")             │
+│  ↓ Mengram: "Sarah Johnson: prefers morning slots..."   │
+│  ↓ Assistant: "Hi Sarah! Want a morning slot again?"    │
+└─────────────────────────────────────────────────────────┘
+```
+
+Under the hood, the recall endpoint pulls every entity + fact for the caller's `sub_user_id` directly (not semantic search) — for a known caller you want **everything we know**, not "most relevant to a query." Persons are sorted by fact count descending so the caller's own facts surface ahead of mentioned people (their daughter, their doctor).
+
+The save endpoint routes the transcript through Mengram's standard extraction pipeline — same code path as `/v1/add`. Entities, facts, episodes, and procedures all get extracted normally. The daily reflection cron then synthesizes patterns ("this caller prefers morning slots", "anxiety about novocaine") so the next recall returns insight, not raw transcripts.
+
+## Endpoints
+
+### POST /v1/voice/vapi/recall
+
+Called by Vapi as a custom tool. Returns the caller context string.
+
+**Request body** (either shape accepted — Vapi sends both):
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "toolCallList": [{
+      "id": "call_abc",
+      "name": "recall_caller",
+      "arguments": { "phone": "+15551234567" }
+    }],
+    "call": {
+      "customer": { "number": "+15551234567" }
+    }
+  }
+}
+```
+
+Or the OpenAI-nested form:
+
+```json
+{
+  "message": {
+    "type": "tool-calls",
+    "toolCalls": [{
+      "id": "call_abc",
+      "type": "function",
+      "function": {
+        "name": "recall_caller",
+        "arguments": "{\"phone\": \"+15551234567\"}"
+      }
+    }]
+  }
+}
+```
+
+**Response** (Vapi tool-result format — `result` MUST be a string):
+
+```json
+{
+  "results": [{
+    "toolCallId": "call_abc",
+    "result": "Known about caller (Sarah Johnson): Sarah Johnson: prefers morning slots..."
+  }]
+}
+```
+
+**Quota:** counts as 1 `search`.
+
+If `message.type` is anything other than `tool-calls`, the endpoint returns `200 {"status":"ignored"}` so Vapi doesn't mark the assistant as broken when lifecycle events arrive at the same URL.
+
+### POST /v1/voice/vapi/save
+
+Called by Vapi at end of call. Routes transcript through Mengram's extraction pipeline.
+
+**Request body:**
+
+```json
+{
+  "message": {
+    "type": "end-of-call-report",
+    "endedReason": "customer-ended-call",
+    "call": {
+      "id": "...",
+      "customer": { "number": "+15551234567" }
+    },
+    "transcript": "Agent: ...\nCaller: ..."
+  }
+}
+```
+
+**Response** (202 — extraction runs in the background):
+
+```json
+{
+  "status": "accepted",
+  "job_id": "job-xxxx",
+  "sub_user_id": "voice:+15551234567"
+}
+```
+
+**Quota:** counts as 1 `add`.
+
+The transcript can also be at `message.artifact.transcript` — Mengram reads whichever is present. Only `end-of-call-report` triggers extraction; partial transcript events are ignored.
+
+## Pricing
+
+Each inbound call = 1 recall + 1 save = 1 search quota + 1 add quota. Free tier (40 adds, 200 searches/mo) covers about 40 inbound calls per month — enough to validate. Paid tiers from $5/mo. See [full pricing](https://mengram.io/#pricing).
+
+| Plan | Inbound calls/mo (estimate) |
+|------|------------------------------|
+| Free | ~40 |
+| Starter ($5) | ~100 |
+| Pro ($19) | ~1,000 |
+| Growth ($59) | ~3,000 |
+| Business ($99) | ~8,000 |
+
+## Performance
+
+Measured against production with a 1,186-word transcript indexed for the caller:
+
+- Single recall: **500–900ms**
+- Under 10–20 concurrent recalls: **p50 ≈ 1200ms, p95 ≈ 1300ms**
+
+The assistant calls `recall_caller` during the natural greeting pause, so callers don't perceive the latency. If your use case has hard sub-1s SLAs, benchmark in your own setup first.
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="How is this different from mem0 + Vapi tutorials online?">
+    Mem0's Vapi tutorials require gluing mem0 + n8n + custom code together. Mengram's adapter is Vapi-native — paste the JSON, you're done. Same hybrid retrieval (vector + BM25 + RRF) underneath, just less wiring.
+  </Accordion>
+  <Accordion title="Will this work with Retell, Pipecat, or LiveKit?">
+    The recall/save endpoints are HTTP webhooks — anything that can POST JSON works. Native Pipecat processor and LiveKit agent helper aren't built yet; email [ali@mengram.io](mailto:ali@mengram.io) if you need one and I'll prioritize based on demand.
+  </Accordion>
+  <Accordion title="What about HIPAA?">
+    Self-host gives full data residency (Apache 2.0, your Postgres, your OpenAI key). Hosted-cloud BAA isn't yet available — for now, healthcare voice agents should self-host. See [Self-hosting](/self-hosting).
+  </Accordion>
+  <Accordion title="Can I test with Vapi's web 'Talk to Assistant' button?">
+    Yes for the conversation flow, but web calls don't have `customer.number`, so recall returns "Web caller — no phone number yet." For full end-to-end testing, buy a $1/mo Vapi phone number and call yourself.
+  </Accordion>
+  <Accordion title="What if a caller calls back from a different number?">
+    They'll be treated as a new caller. If you need cross-number identity, ask for confirmation in the assistant prompt ("Are you the same Sarah who called last week?") and use the existing user_id field to merge — or run `/v1/merge_user` once you've confirmed.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+- Try the [landing demo](https://mengram.io/integrations/vapi) for a one-page setup walkthrough
+- See [Memory Types](/memory-types) for what gets extracted from transcripts
+- Check the [API Reference](/api-reference) for `/v1/voice/vapi/recall` and `/v1/voice/vapi/save` endpoint specs
+- [Self-host](/self-hosting) if you want full data residency
+
+Questions? Email [ali@mengram.io](mailto:ali@mengram.io).
