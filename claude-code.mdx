@@ -15,6 +15,23 @@ Zero manual effort. One command to install.
 
 ## Quick Setup
 
+### Option A — plugin from the marketplace (recommended)
+
+```bash
+# 1. Save your API key once (free key at https://mengram.io)
+mkdir -p ~/.mengram && echo '{"api_key": "om-your-key-here"}' > ~/.mengram/config.json
+
+# 2. Install the plugin
+claude plugin marketplace add alibaizhanov/mengram
+claude plugin install mengram@mengram
+```
+
+The plugin ships the hooks, the MCP server (30 tools), and a skill. Hooks read the key from `~/.mengram/config.json` (an exported `MENGRAM_API_KEY` env var wins if set).
+
+**First-run self-check:** until the plugin verifies one successful API round-trip, failures show a one-line message telling you exactly what's broken. After the first success, failures are silent — an outage never spams you or blocks Claude Code.
+
+### Option B — CLI hooks
+
 ```bash
 pip install mengram-ai
 mengram setup
@@ -22,7 +39,16 @@ mengram setup
 
 This creates your account (if needed), saves your API key, and installs all 3 hooks automatically. Restart Claude Code — done.
 
-Or manually: `export MENGRAM_API_KEY=om-your-key` → `mengram hook install`.
+## Skip the cold start — import your history
+
+Your past Claude Code sessions are already on disk. Feed them in and memory starts full, not empty:
+
+```bash
+pip install mengram-ai
+mengram import claude-code
+```
+
+Secrets (API keys, tokens) are redacted client-side before upload. Then ask Claude: *"what do you know about my projects?"*
 
 ## How It Works
 
@@ -208,12 +234,18 @@ Non-quota errors (network timeouts, transient failures) are silently swallowed s
 
 To check your current usage: `mengram stats` or visit [mengram.io/dashboard](https://mengram.io/dashboard).
 
+## Debugging: verbose markers and heartbeat
+
+**Verbose markers (CLI hooks):** add `--verbose` to any hook command in your hooks config and every exit path emits a one-line status marker — `[mengram:auto-recall] found 3 memories`, `[mengram:auto-save] throttled (2/3)`. Answers "is it working?" in one session restart. Off by default (byte-for-byte silent).
+
+**Heartbeat (plugin):** set `MENGRAM_HEARTBEAT=25` (env) or `"heartbeat": 25` in `~/.mengram/config.json` and every 25th successful save shows one line: `[mengram] heartbeat: 150 conversations saved to memory so far`. With the heartbeat on, silence means something is wrong.
+
 ## Troubleshooting
 
 **Hooks not firing?**
 - Restart Claude Code after installing
 - Check `mengram hook status` to verify all 3 hooks are installed
-- Make sure `MENGRAM_API_KEY` is set in your shell profile (`.zshrc` / `.bashrc`)
+- Keys are read from `MENGRAM_API_KEY` env **or** `~/.mengram/config.json` (env wins) — check `cat ~/.mengram/config.json`
 
 **Memories not appearing?**
 - Auto-save processes in the background — check after ~30 seconds

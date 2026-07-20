@@ -129,6 +129,21 @@ Response includes a `metadata` object with provenance information (source, agent
 
 Delete a specific entity and all its data.
 
+### DELETE /v1/account
+
+Permanently delete your account and **all** associated data — entities, facts, relations, knowledge, embeddings, episodes, procedures, conversation chunks, webhooks, teams you created, API keys, and usage history. Irreversible, immediate, and synchronous. Returns per-table deletion counts so you can verify completion.
+
+```bash
+curl -X DELETE "https://mengram.io/v1/account?confirm=you@example.com" \
+  -H "Authorization: Bearer om-..."
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `confirm` | string | **Required.** Must exactly match your account email |
+
+An active paid subscription is canceled in the billing provider first; if that cancellation fails, deletion aborts (502) so you're never billed for an account whose data is gone. Works identically on self-hosted deployments.
+
 ### DELETE /v1/memories/all
 
 Delete ALL memories for a user. Irreversible.
@@ -287,11 +302,12 @@ Response: `{"format": "claude_md", "content": "# Project Rules\n..."}`
 
 ### GET /v1/episodes
 
-List recent episodes. Each episode has a summary, context, outcome, and participants.
+List recent episodes. Each episode has a summary, context, outcome, and participants. Paginated — the response includes `total`, `limit`, and `offset` so you can page through everything.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `limit` | int | 20 | Max results |
+| `limit` | int | 20 | Max results per page (1–500) |
+| `offset` | int | 0 | Pagination offset |
 | `after` | string | null | ISO datetime filter start |
 | `before` | string | null | ISO datetime filter end |
 | `user_id` | string | `"default"` | User to query |
@@ -314,11 +330,12 @@ Semantic search over episodic memories.
 
 ### GET /v1/procedures
 
-List learned workflows and procedures.
+List learned workflows and procedures. Paginated — the response includes `total`, `limit`, and `offset`.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `limit` | int | 20 | Max results |
+| `limit` | int | 20 | Max results per page (1–500) |
+| `offset` | int | 0 | Pagination offset |
 | `user_id` | string | `"default"` | User to query |
 
 ### GET /v1/procedures/search
@@ -397,6 +414,22 @@ Merge source entity into target. Source gets deleted, all data moves to target.
 ### POST /v1/merge_user
 
 Merge the generic "User" entity into the primary person entity.
+
+### POST /v1/identity
+
+Pin which entity is **you**. Extraction context, "User" merging, and profile generation anchor to the pinned entity instead of guessing by heuristics — fixes identity drift when third parties (collaborators, tool authors) are frequently co-mentioned in your conversations.
+
+```bash
+curl -X POST "https://mengram.io/v1/identity?entity=YourName" \
+  -H "Authorization: Bearer om-..."
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `entity` | string | required | Exact name of the entity that represents you |
+| `user_id` | string | `"default"` | Sub-user scope |
+
+Returns `{"status": "pinned", "entity": "...", "entity_id": "..."}`. Pinning clears the flag from any previously pinned entity. 404 if the entity doesn't exist.
 
 ### POST /v1/archive_fact
 
@@ -636,7 +669,7 @@ Create a Paddle customer portal session for managing subscription.
 
 ### GET /v1/stats
 
-Get usage statistics for the authenticated user.
+Get usage statistics for the authenticated user. `facts` counts **active** facts only (matching what export and list endpoints return); facts archived by conflict resolution/dedup are reported separately as `archived_facts`.
 
 ### GET /v1/me
 

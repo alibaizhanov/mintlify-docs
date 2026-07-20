@@ -108,6 +108,21 @@ mengram hook uninstall            # remove hook
 
 Import existing data into memory.
 
+#### mengram import claude-code
+
+Import your local Claude Code session transcripts (`~/.claude/projects`) into cloud memory — memory knows your projects from minute one instead of starting empty.
+
+```bash
+mengram import claude-code                      # 20 most recent sessions
+mengram import claude-code --last 50            # more history
+mengram import claude-code --project myapp      # only one project
+mengram import claude-code --yes                # skip the confirmation prompt
+```
+
+- **Secrets are redacted client-side** before anything is uploaded (API keys, tokens, JWTs → `[REDACTED]`)
+- Each session counts as **one add operation** against your plan's monthly quota
+- Re-runs skip already-imported sessions; `--reimport` forces a fresh pass
+
 #### mengram import chatgpt
 
 ```bash
