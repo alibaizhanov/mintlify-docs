@@ -1,11 +1,11 @@
 ---
 title: "Claude Code Integration"
-description: "Full memory loop for Claude Code — auto-save conversations, auto-recall context on every prompt, and load your profile on session start."
+description: "Memory that survives /clear and auto-compaction — auto-save conversations, auto-recall context on every prompt, and load your profile on session start."
 ---
 
 ## Overview
 
-Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) hooks to create a full memory loop:
+Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) hooks to create a full memory loop that survives `/clear`, **auto-compaction**, machine switches, and team handoffs — the SessionStart hook fires after every compact and re-injects your context:
 
 1. **Session context** — loads your cognitive profile when a session starts, so Claude knows who you are
 2. **Auto-recall** — searches relevant memories on every prompt and injects them as context

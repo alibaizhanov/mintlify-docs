@@ -359,6 +359,8 @@ Record success or failure for a procedure. On failure with context, triggers exp
 | `failed_at_step` | int | null | Which step number failed |
 | `user_id` | string | `"default"` | User to query |
 
+Failure-driven revisions record the **violated assumption** (the specific belief that turned out false — not just the step number) in the evolution history, and derive a **precondition check** that accumulates in the procedure's `metadata.preconditions` — so recall returns not just the steps but what to verify before trusting them.
+
 ### GET /v1/procedures/:id/history
 
 Get version history for a procedure — how it evolved over time.
@@ -449,7 +451,18 @@ Manually trigger memory reflection. Generates AI insights from facts.
 
 ### GET /v1/reflections
 
-Get all reflections. Optional `scope` filter: `entity`, `cross`, `temporal`.
+Get all reflections. Optional `scope` filter: `entity`, `cross`, `temporal`. Each item includes its `id` for individual deletion.
+
+### DELETE /v1/reflections/:id
+
+Delete a single reflection by id. Use when a generated reflection is wrong or polluted — the next reflection pass regenerates from clean facts.
+
+```bash
+curl -X DELETE "https://mengram.io/v1/reflections/<id>" \
+  -H "Authorization: Bearer om-..."
+```
+
+Returns `{"status": "deleted", "reflection_id": "..."}`, or 404 if the id doesn't exist for this user.
 
 ### GET /v1/insights
 

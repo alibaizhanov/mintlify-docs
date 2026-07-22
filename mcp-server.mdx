@@ -269,4 +269,6 @@ https://mengram.io/.well-known/mcp
 
 <Tip>
 The MCP server uses cloud mode by default with `MENGRAM_API_KEY`. For local mode (your own LLM keys), run `mengram server` without the `--cloud` flag.
+
+**Since 2.27.1:** when `MENGRAM_API_KEY` is not set in the environment, `mengram server --cloud` falls back to `~/.mengram/config.json` (written by `mengram setup`). The explicit `env` blocks in the configs above still work and take precedence — but if you've run setup once, they're optional. This matters for MCP hosts that spawn servers without your shell profile (Claude Desktop on macOS, most Windows setups).
 </Tip>
