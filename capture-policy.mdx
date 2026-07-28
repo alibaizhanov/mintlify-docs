@@ -1,0 +1,101 @@
+---
+title: "Capture Policy"
+description: "Set a server-side boundary on what your AI is allowed to remember — enforced before anything is stored, not a prompt asking the model to behave."
+---
+
+Most memory products decide what to keep by asking the model nicely. A capture policy is different: it's a **deterministic, server-side boundary** applied *before* any extracted memory is persisted. Facts, episodes, and procedures that match a deny rule are dropped — never written to storage, never embedded, never surfaced later.
+
+Use it to keep whole categories of sensitive information (health, legal, financial…) out of long-term memory, block specific words or phrases, or restrict which sources are allowed to write at all.
+
+<Note>
+The policy runs in the extraction pipeline, not in the LLM prompt. It cannot be talked around, and its behavior is identical for the same input every time.
+</Note>
+
+## How it works
+
+Every `add` goes through the boundary in two stages:
+
+1. **Source gate** — if `allow_sources` is set, an add is only accepted when its `metadata.source` is on the list; an add whose source is in `deny_sources` is skipped entirely (nothing from that add is stored).
+2. **Content deny** — the enabled category packs and your custom `deny_keywords` are compiled into one lowercased keyword list. Each extracted fact, episode, and procedure is matched case-insensitively; any that contain a denied keyword as a substring are dropped, the rest are kept.
+
+An empty policy (the default) captures everything.
+
+## Fields
+
+| Field | Type | Effect |
+|-------|------|--------|
+| `deny_categories` | `string[]` | Enable one or more built-in packs (below). Everything matching a pack's keywords is dropped. |
+| `deny_keywords` | `string[]` | Custom words or phrases to never store. Multi-word phrases work (`"project atlas"`). |
+| `deny_sources` | `string[]` | Adds with `metadata.source` in this list are skipped entirely. |
+| `allow_sources` | `string[]` | If set, **only** adds whose `metadata.source` is in this list are accepted. |
+
+## Built-in category packs
+
+| Category | Blocks memory about… |
+|----------|----------------------|
+| `health` | diagnoses, medications, symptoms, therapy, mental-health conditions |
+| `legal` | lawsuits, litigation, attorneys, settlements, criminal charges |
+| `financial` | bank/account/card numbers, SSN, salary, tax returns, wire transfers |
+| `credentials` | passwords, API keys, tokens, private/SSH keys, seed phrases, OTP codes |
+| `location` | home/street address, zip code, GPS coordinates |
+| `relationships` | spouse/partner, divorce, custody, children, family conflict |
+
+<Note>
+`credentials` is a belt-and-suspenders layer. Secrets are already redacted on import (client-side) and again server-side in extraction — enabling this pack additionally drops any *fact* that mentions a credential, not just the secret value.
+</Note>
+
+The current list of category keys is always returned by `GET /v1/capture-policy` under `available_categories`, so you never have to hardcode it.
+
+## Read the current policy
+
+```bash
+curl https://mengram.io/v1/capture-policy \
+  -H "Authorization: Bearer om-..."
+```
+
+```json
+{
+  "capture_policy": {
+    "deny_categories": ["health", "credentials"]
+  },
+  "available_categories": [
+    "health", "legal", "financial",
+    "credentials", "location", "relationships"
+  ]
+}
+```
+
+## Set the policy
+
+`PUT` replaces the stored policy. Send only the fields you want; omitted or empty fields are cleared.
+
+```bash
+curl -X PUT https://mengram.io/v1/capture-policy \
+  -H "Authorization: Bearer om-..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "deny_categories": ["health", "financial", "credentials"],
+    "deny_keywords": ["project atlas", "acquisition"],
+    "allow_sources": ["claude-code", "cursor"]
+  }'
+```
+
+```json
+{
+  "status": "saved",
+  "capture_policy": {
+    "deny_categories": ["health", "financial", "credentials"],
+    "deny_keywords": ["project atlas", "acquisition"],
+    "allow_sources": ["claude-code", "cursor"]
+  }
+}
+```
+
+An unknown category returns `400` with the list of valid categories.
+
+## Notes
+
+- The policy is per **account** and applies to every `add`, from every SDK, integration, and MCP client.
+- It affects **new** captures only — it does not retroactively remove memories stored before the rule existed.
+- Dropped items are silently omitted from extraction results; the add still succeeds for anything that passes.
+- You can also manage the policy visually from the **Capture Policy** section of the [dashboard](https://mengram.io/dashboard).

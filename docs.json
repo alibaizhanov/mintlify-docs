@@ -28,7 +28,8 @@
             "pages": [
               "memory-types",
               "cognitive-profile",
-              "search-filters"
+              "search-filters",
+              "capture-policy"
             ]
           },
           {
