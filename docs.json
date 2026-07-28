@@ -47,6 +47,7 @@
               "openclaw",
               "mcp-server",
               "vapi",
+              "ai-sdk",
               "langchain",
               "crewai",
               "n8n"

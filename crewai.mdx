@@ -3,53 +3,67 @@ title: "CrewAI"
 description: "Give your CrewAI agents persistent memory with procedural learning."
 ---
 
+The [`mengram-crewai`](https://pypi.org/project/mengram-crewai/) package wires Mengram memory into any CrewAI agent as tools.
+
 ## Installation
 
 ```bash
-pip install mengram-ai[crewai]
+pip install mengram-crewai
 ```
 
 ## Quick start
 
 ```python
-from integrations.crewai import create_mengram_tools  # included in mengram-ai
+from mengram_crewai import mengram_tools
 from crewai import Agent, Task, Crew
 
-# Create memory tools
-tools = create_mengram_tools(api_key="om-your-key")
+tools = mengram_tools(api_key="om-your-key", user_id="user-123")
 
 agent = Agent(
     role="Support Engineer",
     goal="Help users with technical issues using past context",
+    backstory="You remember every prior interaction and learned workflow.",
     tools=tools,
 )
 
 task = Task(
     description="Help the user debug their deployment issue",
+    expected_output="A resolution grounded in the user's history",
     agent=agent,
 )
 
-crew = Crew(agents=[agent], tasks=[task])
-result = crew.kickoff()
+result = Crew(agents=[agent], tasks=[task]).kickoff()
 ```
+
+`api_key` falls back to `MENGRAM_API_KEY` and `user_id` to `MENGRAM_USER_ID` if omitted.
 
 ## Available tools
 
+`mengram_tools()` returns three tools ready to pass to `Agent(tools=...)`:
+
 | Tool | Description |
 |------|-------------|
-| `mengram_search` | Search all 3 memory types (semantic, episodic, procedural) |
-| `mengram_remember` | Save information to memory (auto-extracts all 3 types) |
-| `mengram_profile` | Get full user context via Cognitive Profile |
-| `mengram_save_workflow` | Save a completed workflow as a procedure |
-| `mengram_workflow_feedback` | Report success/failure of a workflow |
+| `search_memory` | Semantic search over facts, preferences, and past events |
+| `save_memory` | Save a durable fact or decision to long-term memory |
+| `get_procedures` | Retrieve learned workflows — steps, success/failure record, and preconditions to verify |
 
 ## Procedural learning
 
-When a CrewAI agent completes a multi-step task, Mengram automatically saves it as a procedure. Next time a similar task comes up, the agent already knows the optimal path — with success/failure tracking.
+`get_procedures` is the distinctive tool. When a workflow has failed before, Mengram returns it with the preconditions that were violated last time, so the agent verifies them up front instead of repeating the mistake.
 
 ```python
-# Agent workflow is automatically extracted as a procedure
-# On next similar task, the agent retrieves the procedure
-results = tools[0].run("how to deploy to Railway")
-# Returns the learned procedure with steps
+tools = mengram_tools(api_key="om-...", user_id="user-123")
+# The agent calls get_procedures("deploy to Railway") and receives, e.g.:
+#   deploy-railway (v3, 11 ok / 1 failed) — verify first: run migrations before push
+```
+
+## Options
+
+```python
+mengram_tools(
+    api_key="om-...",       # or MENGRAM_API_KEY
+    user_id="user-123",     # or MENGRAM_USER_ID; multi-user isolation
+    limit=5,                # max results per search/procedures call
+    base_url="https://...", # self-hosted instances
+)
 ```

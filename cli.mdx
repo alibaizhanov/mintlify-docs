@@ -13,20 +13,49 @@ pip install mengram-ai
 
 ### mengram setup
 
-Interactive signup and configuration — creates your account, saves the API key to your shell profile, and installs Claude Code hooks. All from the terminal.
+One command does the whole onboarding: creates your account, saves the API key, installs Claude Code hooks, **auto-detects and configures your other AI tools** (Cursor, Claude Desktop, Windsurf), **imports your existing Claude Code history** so memory is useful from minute one, and verifies the round-trip.
 
 ```bash
 mengram setup
 mengram setup --email you@example.com    # skip email prompt
 mengram setup --no-hooks                 # skip Claude Code hook install
+mengram setup --no-tools                 # skip Cursor/Claude Desktop/Windsurf MCP config
+mengram setup --no-import                # skip Claude Code history import
+mengram setup --no-verify                # skip the round-trip check
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--email` | Email address (skip interactive prompt) |
+| `--key` | API key (skip signup, just save + configure) |
 | `--no-hooks` | Skip Claude Code hook installation |
+| `--no-tools` | Skip auto-configuring detected Cursor / Claude Desktop / Windsurf |
+| `--no-import` | Skip importing local Claude Code session history |
+| `--no-verify` | Skip the end-to-end verification |
 
-If you already have a key, it will ask whether to reconfigure. If the email is already registered, it offers to reset your API key.
+Detected tool configs are merged safely (existing servers preserved, a backup is written, unparseable files are never overwritten). If you already have a key, it asks whether to reconfigure.
+
+### mengram weekly
+
+Your AI's memory, summarized for the past 7 days — including the one metric no other tool shows: **repeated mistakes prevented** (procedures with past failures that your memory recalled this week, each with the date you last got bitten by it).
+
+```bash
+mengram weekly            # print the report
+mengram weekly --share    # also print + copy a ready-to-post summary
+mengram weekly --no-color # plain output (for piping)
+```
+
+The report auto-shows once a week at the start of a Claude Code session (via the SessionStart hook) — shown to you, never added to the model's context. Pass `--no-weekly` to `mengram auto-context` to disable.
+
+```
+┌────────────────────────────────────────────────────────┐
+│  REPEATED MISTAKES PREVENTED                    3      │
+│                                                        │
+│  · psycopg2 pool deadlock       last bitten: Apr 12    │
+│  · wrong usage table (api_calls last bitten: Jul 20    │
+│  · npx guess vs mengram server  last bitten: Jun 30    │
+└────────────────────────────────────────────────────────┘
+```
 
 ### mengram init
 
@@ -129,7 +158,7 @@ mengram import claude-code --project myapp      # only one project
 mengram import claude-code --yes                # skip the confirmation prompt
 ```
 
-- **Secrets are redacted client-side** before anything is uploaded (API keys, tokens, JWTs → `[REDACTED]`)
+- **Secrets are redacted** before storage — on import (client-side) and again server-side in the extraction pipeline, so keys/tokens/JWTs pasted into a conversation never reach the model or get stored (→ `[REDACTED]`)
 - Each session counts as **one add operation** against your plan's monthly quota
 - Re-runs skip already-imported sessions; `--reimport` forces a fresh pass
 

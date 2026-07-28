@@ -1,0 +1,79 @@
+---
+title: "Vercel AI SDK"
+description: "Give your Vercel AI SDK agents long-term memory — semantic, episodic, and procedural."
+---
+
+The [`mengram-ai-sdk`](https://www.npmjs.com/package/mengram-ai-sdk) package adds Mengram memory to `generateText` / `streamText` agents as tools, plus a Cognitive Profile helper for system prompts.
+
+## Installation
+
+```bash
+npm install mengram-ai-sdk ai zod
+```
+
+Grab a free API key at [mengram.io](https://mengram.io) (40 memory adds + 200 searches/mo, no card).
+
+## Memory tools
+
+```js
+import { generateText } from 'ai';
+import { mengramTools } from 'mengram-ai-sdk';
+
+const { text } = await generateText({
+  model: yourModel,
+  tools: mengramTools({ apiKey: process.env.MENGRAM_API_KEY, userId: 'user-123' }),
+  prompt: 'Deploy the app the way we always do.',
+});
+```
+
+Three tools are exposed to the model:
+
+| Tool | Description |
+|------|-------------|
+| `searchMemory` | Semantic search over facts, preferences, events, decisions |
+| `addMemory` | Save a durable fact to long-term memory |
+| `getProcedures` | Retrieve learned workflows: steps, success/failure track record, preconditions to verify |
+
+`getProcedures` is the distinctive one — it returns workflows that evolved from failures, with the preconditions that were violated last time, so your agent stops repeating mistakes it already made.
+
+## Cognitive Profile as system prompt
+
+One call returns a ready-to-use system prompt built from all three memory types:
+
+```js
+import { generateText } from 'ai';
+import { retrieveProfile } from 'mengram-ai-sdk';
+
+const system = await retrieveProfile({ apiKey: process.env.MENGRAM_API_KEY, userId: 'user-123' });
+// '' if the user has no memories yet — safe to pass unconditionally
+
+const { text } = await generateText({ model: yourModel, system, prompt: '...' });
+```
+
+## Save conversations
+
+Extraction runs server-side — pass raw messages, Mengram distills facts, events, and workflows:
+
+```js
+import { saveConversation } from 'mengram-ai-sdk';
+
+await saveConversation(result.response.messages, {
+  apiKey: process.env.MENGRAM_API_KEY,
+  userId: 'user-123',
+});
+```
+
+## Multi-user apps
+
+Pass your end-user's id as `userId` — each user gets isolated facts, events, workflows, and profile under one API key. See [Memory API for agent builders](https://mengram.io/for-agents).
+
+## Options
+
+```js
+mengramTools({
+  apiKey: 'om-...',        // or MENGRAM_API_KEY
+  userId: 'user-123',      // multi-user isolation
+  limit: 5,                // max results per tool call
+  baseUrl: 'https://...',  // self-hosted instances
+});
+```
