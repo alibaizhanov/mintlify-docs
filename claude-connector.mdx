@@ -1,0 +1,58 @@
+---
+title: "Claude Connector"
+description: "Give Claude persistent memory in one click — add Mengram as a connector on claude.ai, Desktop, or Cowork. No CLI, no config."
+---
+
+Claude forgets everything between chats. The Mengram connector fixes that: set a
+preference once and Claude recalls it weeks later — across every conversation on
+claude.ai, Desktop, and Cowork. No terminal, no config files, no API key to paste.
+
+<Note>
+This is the zero-setup path. If you use **Claude Code**, the [hooks integration](/claude-code)
+captures memory automatically; for **Cursor / Windsurf**, see the [MCP server](/mcp-server).
+</Note>
+
+## Add it (30 seconds)
+
+1. In Claude, open **Settings → Connectors**.
+2. Click **Add custom connector**.
+3. Fill in:
+   - **Name:** `Mengram`
+   - **Remote MCP server URL:** `https://mengram.io/mcp/connector`
+   - Leave the **OAuth Client ID / Secret** fields (under Advanced) **empty**.
+4. Click **Add**. Claude opens the Mengram sign-in page — enter your email and the
+   code we send you. That's it; the connector is live.
+
+No account yet? The email step creates one automatically — free, no card.
+
+## What Claude can do with it
+
+Once connected, Claude has four memory tools and uses them on its own:
+
+| Tool | What it does |
+|------|--------------|
+| **Remember** | Saves what matters from a conversation — facts, preferences, decisions. |
+| **Recall** | Searches your memory to answer "what do you know about…" questions. |
+| **Get context** | Loads a compact profile of who you are and how you work, for personalization. |
+| **List procedures** | Surfaces workflows you've taught Claude, with a success/failure track record. |
+
+Try it: tell Claude *"remember: I deploy with Railway"*, then in a **new chat** ask
+*"how do I deploy?"* — it recalls Railway with no re-explaining.
+
+## Works everywhere Claude runs
+
+Available on **Free, Pro, Max, Team, and Enterprise** plans. Free Claude accounts
+can add one custom connector. The same memory is shared across claude.ai, Claude
+Desktop, and Cowork — and with your Claude Code / Cursor setups if you use those too.
+
+## Privacy
+
+- **Server-side capture policy** — block whole categories (health, financial,
+  credentials…) so sensitive information is never stored. See [Capture Policy](/capture-policy).
+- **Secrets redacted** before storage — API keys, tokens, and passwords never get saved.
+- Open-core (Apache-2.0), with a [self-hostable](/self-hosting) backend if you want full control.
+
+## Remove or reconnect
+
+Settings → Connectors → Mengram → remove. Re-adding uses the same email sign-in and
+restores access to your existing memory.

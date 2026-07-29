@@ -43,6 +43,7 @@
           {
             "group": "Integrations",
             "pages": [
+              "claude-connector",
               "claude-code",
               "managed-agents",
               "openclaw",
