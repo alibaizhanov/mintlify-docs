@@ -350,7 +350,9 @@ Semantic search over procedural memories.
 
 ### PATCH /v1/procedures/:id/feedback
 
-Record success or failure for a procedure. On failure with context, triggers experience-driven evolution.
+Record success or failure for a procedure. On failure with context, triggers experience-driven evolution (Pro and above).
+
+This is not the only way a procedure evolves. Mengram also infers failures from episodes as they are added and revises the matching procedure on its own, which in practice is the more common path. A revision only earns a new version number once the current one has succeeded at least once — a version nobody ran is a hypothesis, so it is edited in place rather than superseded.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|

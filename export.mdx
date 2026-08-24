@@ -1,0 +1,88 @@
+---
+title: "Export & Portability"
+description: "Take your memory out as plain Markdown files at any time — no account needed to read them, nothing to migrate if you leave."
+---
+
+## Why this exists
+
+A memory you cannot read, correct, or take with you is not really yours. So
+everything Mengram stores comes back out as plain Markdown: one file per thing
+it remembers, relations as `[[wikilinks]]`, procedures with the record of them
+working and the log of why they changed.
+
+The export is deliberately **not charged against your add or search quota**.
+Getting your data out should never cost you the ability to use the product.
+The per-minute rate limit still applies.
+
+## From the CLI
+
+```bash
+mengram export obsidian ~/Documents/MyVault   # into an Obsidian vault
+mengram export markdown ./backup              # into any directory
+```
+
+| Flag | Meaning |
+|---|---|
+| `--user-id` | Export one sub-user's memory instead of the default |
+| `--force` | Overwrite an existing `memory/` folder |
+
+Without `--force` the command refuses to overwrite an existing `memory/`
+folder, so a second run cannot quietly replace something you edited.
+
+## From the API
+
+<ParamField query="format" type="string" default="markdown">
+  `markdown` returns a zip of the tree. `files` returns the same tree as
+  `{path: text}` for clients that write files themselves. `json` returns the
+  underlying records.
+</ParamField>
+
+<ParamField query="sub_user_id" type="string" default="default">
+  Which sub-user's memory to export.
+</ParamField>
+
+```bash
+curl -H "Authorization: Bearer om-your-key" \
+  "https://mengram.io/v1/export?format=markdown" -o memory.zip
+```
+
+```python
+from mengram import CloudMemory
+
+m = CloudMemory(api_key="om-your-key")
+tree = m.export(format="files")     # {"memory/entities/Ali.md": "...", ...}
+```
+
+## What you get
+
+```
+memory/
+  MEMORY.md                            index — what is in here
+  entities/Ali.md                      what is true
+  episodes/2026-07-30-deploy-failed.md what happened, and how it turned out
+  procedures/deploy to Railway.md      how to do it, and whether it works
+  profile.md
+```
+
+Because relations are ordinary wikilinks, Obsidian's graph view works on the
+folder with no configuration — the links *are* the graph. And because it is
+files, `git diff` shows what your agent learned this week, a pull request
+reviews something it learned wrongly, and `git revert` undoes it.
+
+## Into an Obsidian vault
+
+The [Obsidian plugin](https://obsidian.md/plugins?id=mengram) does this without
+the terminal: run **Pull memory into vault** from the command palette. The
+folder it writes is generated — anything you edit inside is replaced on the
+next pull, so keep your own notes elsewhere.
+
+## The format is published separately
+
+The tree above is [memfmt](/memfmt), a small open format with its own library
+and specification. Mengram writes it; the library reads it without an account
+or a server. That separation is the point: if you stop using Mengram, the files
+keep working.
+
+<Note>
+Reading a folder back into Mengram is not built yet. Export is one-way today.
+</Note>

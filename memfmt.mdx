@@ -1,0 +1,126 @@
+---
+title: "The memfmt Format"
+description: "An agent's memory as Markdown files — the open format Mengram writes, with a library that reads it without an account or a server."
+---
+
+## What it is
+
+`memfmt` is a small specification and a dependency-free Python library for
+storing an agent's memory as plain Markdown. Mengram's export writes it, but
+the format belongs to neither the product nor the company: the library works on
+a folder, with no account, no server and no network.
+
+```bash
+pip install memfmt
+```
+
+```bash
+memfmt stat ./memory        # what is in here
+memfmt validate ./memory    # would any file lose data if a tool rewrote it?
+memfmt context ./memory "why did the deploy fail"
+```
+
+Source and specification: [github.com/alibaizhanov/memfmt](https://github.com/alibaizhanov/memfmt) (MIT).
+
+## Three kinds of file
+
+Agents forget in three different ways, so there are three kinds of note.
+
+<CardGroup cols={3}>
+  <Card title="Entities" icon="circle-nodes">
+    What is true. A person, a service, a file — with its facts and its
+    relations to other entities.
+  </Card>
+  <Card title="Episodes" icon="clock-rotate-left">
+    What happened, dated, and how it turned out. An event with no outcome
+    teaches nothing.
+  </Card>
+  <Card title="Procedures" icon="list-check">
+    A workflow that was learned, with the record of it working and the log of
+    why it was revised.
+  </Card>
+</CardGroup>
+
+## A procedure file
+
+This is the one worth reading closely — it is the file the format exists for.
+
+```markdown
+---
+memfmt_type: procedure
+version: 3
+success_count: 11
+fail_count: 1
+---
+
+# deploy to Railway (v3 · 86% reliable)
+
+**When** — a change lands on main
+
+## Steps
+
+1. push to main — the webhook does the rest [commit → deploy] (12✓/0✗)
+2. watch the boot log [deploy → boot log]
+3. verify /health — expect 200 within 60s [deploy →] (9✓/3✗)
+
+## Evolution
+
+- v1 → v2 (2026-06-02, 4✓/2✗): added the health check
+- v2 → v3 (9✓/1✗): wait for the pool before probing
+```
+
+A workflow on its own is a guess somebody wrote down. With a record and the
+revisions that produced it, it is evidence — and an agent can tell a step that
+survived eleven deploys from one nobody has ever run.
+
+### Why the heading is not `success / total`
+
+A bare ratio punishes the revision: a new v3 opens at 0✓/0✗ and reads worse
+than the v2 it was written to fix, so anything comparing the two keeps choosing
+the version that already failed. Progressive delivery and CI met this years
+ago — a canary confidence record, a flake quarantine ledger — and both smooth
+against a prior instead of comparing raw counts.
+
+So the percentage is a smoothed estimate, and the word after it says which kind
+of claim it is:
+
+| state | means |
+|---|---|
+| `untested` | no runs, and no lineage to draw on |
+| `81% expected` | no runs of its own; this is what its lineage suggests |
+| `86% reliable` | its own record, smoothed so one lucky run is not 100% |
+
+The raw counts in frontmatter are exactly what happened. The percentage is
+derived and is never a source of truth.
+
+### What a step consumes and produces
+
+The brackets are optional, and they are names rather than types. Told only that
+step 3 failed, you cannot tell whether step 3 is broken or whether step 1
+handed it something broken — and that is the difference between fixing the
+right thing and rewriting a step that was never at fault.
+
+`memfmt validate` checks that the chain joins up and reports any step asking
+for something no earlier step produces.
+
+## Rules worth knowing
+
+1. **Frontmatter is the source of truth.** Editing the `(v3 · 86% reliable)` in
+   a heading changes nothing — the parser reads the frontmatter.
+2. **`memfmt_type` marks a file as ours.** Files without it are ignored, so a
+   memory folder can live inside a vault full of your own notes.
+3. **A missing record means untracked, not failed.**
+4. **Round-trip or it is not the format.** Parsing what was serialised returns
+   the same object, and serialising what was parsed is byte-identical.
+   `memfmt validate` checks exactly that against a real folder.
+
+## Where files stop being enough
+
+Honestly: at a few hundred of them. Relevance in `memfmt context` is word
+overlap, so it misses things phrased differently; syncing a folder between
+machines is a real problem; deduplicating facts that contradict each other
+needs a model.
+
+That is what the hosted product is for. But the library stands on its own and
+does not expire if you never touch it — which was the condition for publishing
+it at all.

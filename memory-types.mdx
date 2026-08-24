@@ -57,7 +57,9 @@ procs = m.procedures(query="deploy")
 # Report success/failure — triggers experience-driven evolution
 m.procedure_feedback(proc_id, success=True)
 
-# On failure with context, the procedure evolves automatically
+# On failure with context, the procedure evolves automatically.
+# Mengram also infers failures from episodes as they arrive and revises
+# on its own — feedback is the explicit path, not the only one.
 m.procedure_feedback(proc_id, success=False,
     context="Step 3 failed: OOM on build",
     failed_at_step=3)

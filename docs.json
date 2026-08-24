@@ -29,7 +29,9 @@
               "memory-types",
               "cognitive-profile",
               "search-filters",
-              "capture-policy"
+              "capture-policy",
+              "export",
+              "memfmt"
             ]
           },
           {
