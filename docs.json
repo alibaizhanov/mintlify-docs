@@ -18,6 +18,7 @@
             "pages": [
               "index",
               "quickstart",
+              "local-mode",
               "agent-install",
               "agent-memory",
               "cli"

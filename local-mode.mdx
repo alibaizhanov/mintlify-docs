@@ -1,0 +1,126 @@
+---
+title: "Local mode — memory in a folder"
+description: "No account, no server. Your agent's memory is a folder of Markdown you own, with the same procedures-with-outcomes the cloud keeps: versions, success/fail counts, a policy gate, and a regression gate."
+---
+
+## What it is
+
+The folder is the memory. `mengram local` reads and writes a [memfmt](https://github.com/alibaizhanov/memfmt) tree:
+
+```
+memory/
+  MEMORY.md                      index
+  entities/Railway.md            what is true
+  episodes/2026-07-30-deploy failed on a cold pool.md    what happened, and how it turned out
+  procedures/Deploy to Railway.md                        how to do it, and whether it works
+  .mengram/config.json           which model to use
+  .mengram/quarantine.json       revisions the regression gate refused
+```
+
+Git diffs it. Obsidian draws it. `memfmt validate` checks it. Nothing expires, nothing asks for a key.
+
+**Bring your own model.** Extraction (turning a conversation into facts, events and workflows) and a failure revision need an LLM: an Anthropic or OpenAI key you already have, or Ollama (8B+, 8K+ context). Everything else — search, recall, the policy gate, recording outcomes — runs with no model and no network.
+
+## Install
+
+```bash
+pip install mengram-ai
+mengram local init ./memory --provider anthropic --api-key sk-ant-...   # or --provider openai / ollama
+export MENGRAM_MEMORY_DIR=$PWD/memory
+```
+
+`init` writes the folder and `.mengram/config.json`. With no `--provider`, an `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` in the environment is used; with neither, the folder still works for everything but `add`.
+
+## Use it
+
+```bash
+mengram local add "I deploy to Railway from main; last time /health was probed before the pool was up"
+mengram local search "railway pool"
+mengram local procedures
+mengram local feedback "Deploy to Railway" --success
+mengram local feedback "Deploy to Railway" --failure --step 3 --context "connection refused on /health"
+mengram local stat
+mengram local quarantine
+```
+
+A failure with `--context` asks your model what belief broke and produces the next version of the workflow — unless the fix would silently break another workflow in the folder, in which case it is quarantined for you to review instead of shipped to the agent.
+
+## Claude Code, all local
+
+```bash
+mengram hook install --memory ./memory
+```
+
+Installs the four hooks with the folder written into each command (hooks run without your shell profile, so an env var is not enough):
+
+| Hook | What it does locally |
+|------|----------------------|
+| `SessionStart` | loads a profile of the folder — who you are, the workflows with a record |
+| `UserPromptSubmit` | recalls facts, events and workflows that share words with your prompt |
+| `Stop` | extracts the turn into the folder with your model (silent if none is configured) |
+| `PreToolUse` on `Bash` | the [policy gate](/claude-code#4-before-a-bash-command-the-policy-gate): a workflow-shaped command that matches an `untested` or below-the-bar workflow is turned into a confirmation prompt |
+
+## MCP for any client
+
+```bash
+mengram server --memory ./memory
+```
+
+Five tools over stdio: `remember`, `recall`, `context_for`, `list_procedures`, `procedure_feedback` — the same surface as the [Claude connector](/claude-connector), plus feedback so an agent can record an outcome from inside its tool call. Claude Desktop, Cursor, Windsurf and any MCP client can point at it:
+
+```json
+{
+  "mcpServers": {
+    "mengram": {
+      "command": "mengram",
+      "args": ["server", "--memory", "/absolute/path/to/memory"]
+    }
+  }
+}
+```
+
+## What a procedure file looks like
+
+```markdown
+---
+memfmt_type: procedure
+version: 2
+success_count: 0
+fail_count: 0
+last_failure: the connection pool was warm when /health was probed
+last_failed: 2026-09-04
+entities:
+  - Railway
+---
+
+# Deploy to Railway (v2 · 81% expected)
+
+**When** — a change lands on main
+
+**Preconditions**
+
+- verify the pool is warm before probing /health
+
+**Last failure** — 2026-09-04: the connection pool was warm when /health was probed
+
+## Steps
+
+1. push to main — the webhook does the rest (4✓/0✗)
+2. watch the boot log (4✓/0✗)
+3. wait for the pool — pool_max reached
+4. verify /health — expect 200 within 60s (3✓/1✗)
+
+## Evolution
+
+- v1 → v2 (2026-09-04, 3✓/1✗): wait for the pool before probing
+```
+
+`81% expected` is not a ratio: v2 has no runs of its own yet, and the number is inherited from v1's record, discounted. Once v2 runs it reads `N% reliable`. The steps that the revision left alone keep their counts; the new step starts untracked. See [memfmt](https://github.com/alibaizhanov/memfmt#why-the-heading-is-not-success--total) for the rules.
+
+## Where a folder stops being enough
+
+Search is word overlap: past a few hundred files you want embeddings. Syncing a folder between machines is a `git pull` only until two machines disagree. Extraction runs only when you call it, not from every session in the background. That is what the [cloud](/quickstart) adds — and it writes this same format, so `mengram export markdown` hands you the folder back at any time.
+
+## Not yet
+
+Multiple users per folder, the reflection and curator agents, deleting a file that a rename left behind, and staleness (`last_succeeded`, which needs its own field — the same gap the cloud has).
