@@ -1,6 +1,6 @@
 ---
 title: "Claude Code Integration"
-description: "Memory that survives /clear and auto-compaction — auto-save conversations, auto-recall context on every prompt, and load your profile on session start."
+description: "Memory that survives /clear and auto-compaction — auto-save conversations, auto-recall context on every prompt, load your profile on session start, and a policy gate that asks before Claude runs a workflow with a weak record."
 ---
 
 ## Overview
@@ -10,6 +10,7 @@ Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-
 1. **Session context** — loads your cognitive profile when a session starts, so Claude knows who you are
 2. **Auto-recall** — searches relevant memories on every prompt and injects them as context
 3. **Auto-save** — captures conversations in the background to build up memory over time
+4. **Policy gate** — before a workflow-shaped Bash command runs, checks it against the workflows memory has learned; if the match has a weak record, Claude has to ask you first
 
 Zero manual effort. One command to install.
 
@@ -37,7 +38,7 @@ pip install mengram-ai
 mengram setup
 ```
 
-This creates your account (if needed), saves your API key, and installs all 3 hooks automatically. Restart Claude Code — done.
+This creates your account (if needed), saves your API key, and installs all 4 hooks automatically. Restart Claude Code — done.
 
 ## Skip the cold start — import your history
 
@@ -96,6 +97,35 @@ Claude finishes responding
   → Memory grows over time
 ```
 
+### 4. Before a Bash command — the policy gate
+
+Outcome history should change what the agent is allowed to do, not only how results rank. When Claude is about to run a command that looks like a workflow (`git push`, `deploy`, `migrate`, `kubectl`, `terraform`, `rm -rf` …), the `PreToolUse` hook fires:
+
+```
+Claude wants to run: git push origin main
+  → mengram auto-policy runs
+  → Finds the learned workflow this matches (GET /v1/procedures/search)
+  → Reads its record: untested · 61% expected · 88% reliable
+
+  88% reliable   → silent, the command runs as it would have
+  untested       → "ask": you see why, Claude gets the steps on record
+  61% expected   → "ask": this version has never run; 61% is inherited from the one it replaced
+  58% reliable   → "ask": below the bar (default 70%)
+```
+
+The prompt you see is a normal Claude Code permission prompt, labelled `[settings]`, with the reason: *"Mengram: learned workflow 'deploy to Railway' has never been run. Review the plan before it runs."* Claude receives the workflow's steps, preconditions and last failure as context, so if you decline it can show you the plan instead of guessing.
+
+The gate never denies. Memory can ask; it does not get to forbid. Commands that are not workflow-shaped (`ls`, `cat`, `grep`) never trigger a lookup, so the hook costs nothing on ordinary work.
+
+**Why the record fills itself here and not offline.** The gate is only as good as the counts behind it. With the cloud, auto-save extracts workflows from your sessions, a failed run records the violated assumption on a new version, and every procedure carries `success_count` / `fail_count` / `last_failure` without you writing anything. The same gate runs fully offline against a [memfmt](https://github.com/alibaizhanov/memfmt) folder (`MENGRAM_MEMORY_DIR=./memory`), but there the counts are whatever you typed.
+
+| Setting | Default | What it does |
+|---------|---------|--------------|
+| `MENGRAM_POLICY_MIN_RELIABLE` | `70` | Percent below which a workflow with a record is confirmed |
+| `MENGRAM_POLICY_PATTERN` | deploy / push / migrate / kubectl / … | Regex for "workflow-shaped"; `.*` gates every Bash command |
+| `MENGRAM_MEMORY_DIR` | unset | Read a memfmt folder instead of the cloud (no key, no network) |
+| `mengram hook install --no-policy` | — | Install the other three hooks without the gate |
+
 ### Full Loop
 
 ```
@@ -107,6 +137,7 @@ Claude finishes responding
 │  ↓ UserPromptSubmit → relevant memory found  │
 │                                              │
 │  Claude responds (with memory context)       │
+│  ↓ PreToolUse → weak workflow? ask first     │
 │  ↓ Stop → conversation saved (background)    │
 │                                              │
 │  Next prompt → recall again...               │
@@ -117,15 +148,16 @@ Claude finishes responding
 
 ### mengram hook install
 
-Installs all 3 hooks into `~/.claude/settings.json`.
+Installs all 4 hooks into `~/.claude/settings.json`.
 
 ```bash
 mengram hook install                    # default: save every 3rd response
 mengram hook install --every 5          # save every 5th response
 mengram hook install --user-id myuser   # custom user_id
+mengram hook install --no-policy        # skip the policy gate
 ```
 
-This adds 3 hooks to your Claude Code settings:
+This adds 4 hooks to your Claude Code settings:
 
 ```json
 {
@@ -157,6 +189,16 @@ This adds 3 hooks to your Claude Code settings:
           "async": true
         }]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-policy",
+          "timeout": 10
+        }]
+      }
     ]
   }
 }
@@ -178,6 +220,7 @@ Mengram Hooks
   Auto-save:      installed (every 3 responses)
   Auto-recall:    installed
   Session context: installed
+  Policy gate:    installed
   API Key:        om-...Kb8 (set)
   API:            connected (free plan)
   Settings:       /Users/you/.claude/settings.json
@@ -205,6 +248,9 @@ mengram hook uninstall
 | `MENGRAM_API_KEY` | Yes | Your Mengram API key (starts with `om-`) |
 | `MENGRAM_URL` | No | Custom API URL (default: `https://mengram.io`) |
 | `MENGRAM_USER_ID` | No | Default user_id (overridden by `--user-id`) |
+| `MENGRAM_POLICY_MIN_RELIABLE` | No | Policy gate bar, percent (default `70`) |
+| `MENGRAM_POLICY_PATTERN` | No | Regex for commands the policy gate looks at |
+| `MENGRAM_MEMORY_DIR` | No | memfmt folder for the policy gate's offline mode |
 
 ## Filtering
 
@@ -217,6 +263,12 @@ mengram hook uninstall
 - Very short prompts (< 10 characters)
 - Slash commands (`/help`, `/clear`, etc.)
 - Simple confirmations (`yes`, `no`, `ok`)
+
+**Policy gate** skips:
+- Any tool other than `Bash`
+- Commands that are not workflow-shaped (`ls`, `cat`, `grep`, `python -c …`) — no lookup, no cost
+- Matches whose record is at or above the bar — the command runs untouched
+- Semantic near-misses: a matched workflow must share at least one real word with the command before it can interrupt you
 
 ## Quota Limits
 
@@ -244,7 +296,7 @@ To check your current usage: `mengram stats` or visit [mengram.io/dashboard](htt
 
 **Hooks not firing?**
 - Restart Claude Code after installing
-- Check `mengram hook status` to verify all 3 hooks are installed
+- Check `mengram hook status` to verify all 4 hooks are installed
 - Keys are read from `MENGRAM_API_KEY` env **or** `~/.mengram/config.json` (env wins) — check `cat ~/.mengram/config.json`
 
 **Memories not appearing?**
