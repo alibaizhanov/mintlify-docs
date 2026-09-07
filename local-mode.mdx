@@ -54,7 +54,15 @@ mengram import claude-code --memory ./memory            # 20 most recent session
 mengram import claude-code --memory ./memory --last 50 --project shop
 ```
 
-Each session becomes one extraction with the folder's model, redacted for keys and tokens before it is read; nothing leaves your machine except those model calls. The import ends with what the folder now holds and the workflows it learned, with their record. Imported sessions are listed in `.mengram/claude-code-imported.json`, so re-runs pick up only new ones (`--reimport` forces).
+Each session becomes one extraction with the folder's model, redacted for keys and tokens before it is read; nothing leaves your machine except those model calls. The import ends with what the folder now holds and the workflows it learned, with their record, and writes the map below. Imported sessions are listed in `.mengram/claude-code-imported.json`, so re-runs pick up only new ones (`--reimport` forces).
+
+## See what it holds
+
+```bash
+mengram local map --memory ./memory --open
+```
+
+One self-contained HTML page (`memory-map.html` in the folder, or `--out`), rendered from the same Markdown files, with nothing fetched or sent. Three views, in the order you would ask: **who you are** (entities by type, with facts and relations), **what happened** (episodes on a timeline, with outcomes), **what your agent learned** (each workflow as a step chain with the per-step record, its versions with the belief that broke, and the quarantine of revisions the regression gate refused). Re-run it after an import or a `feedback`.
 
 ## Claude Code, all local
 
