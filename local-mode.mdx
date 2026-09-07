@@ -45,6 +45,17 @@ mengram local quarantine
 
 A failure with `--context` asks your model what belief broke and produces the next version of the workflow — unless the fix would silently break another workflow in the folder, in which case it is quarantined for you to review instead of shipped to the agent.
 
+## Start from your Claude Code history
+
+An empty folder takes days to fill through the hooks. Your Claude Code sessions are already on disk, so seed it from them:
+
+```bash
+mengram import claude-code --memory ./memory            # 20 most recent sessions
+mengram import claude-code --memory ./memory --last 50 --project shop
+```
+
+Each session becomes one extraction with the folder's model, redacted for keys and tokens before it is read; nothing leaves your machine except those model calls. The import ends with what the folder now holds and the workflows it learned, with their record. Imported sessions are listed in `.mengram/claude-code-imported.json`, so re-runs pick up only new ones (`--reimport` forces).
+
 ## Claude Code, all local
 
 ```bash
