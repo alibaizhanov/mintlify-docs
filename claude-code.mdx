@@ -117,7 +117,29 @@ The prompt you see is a normal Claude Code permission prompt, labelled `[setting
 
 The gate never denies. Memory can ask; it does not get to forbid. Commands that are not workflow-shaped (`ls`, `cat`, `grep`) never trigger a lookup, so the hook costs nothing on ordinary work.
 
-**Why the record fills itself here and not offline.** The gate is only as good as the counts behind it. With the cloud, auto-save extracts workflows from your sessions, a failed run records the violated assumption on a new version, and every procedure carries `success_count` / `fail_count` / `last_failure` without you writing anything. The same gate runs fully offline against a [memfmt](https://github.com/alibaizhanov/memfmt) folder (`MENGRAM_MEMORY_DIR=./memory`), but there the counts are whatever you typed.
+### 5. After a Bash command — the record
+
+A gate is only as good as the counts behind it, and until 2.38 nothing produced them: extraction wrote workflows, nobody wrote down whether they worked, and every procedure stayed `untested` forever. The `PostToolUse` hook closes that loop.
+
+```
+Claude ran: twine upload dist/*  → exit 0
+  → mengram auto-outcome runs
+  → Recognises the command as step 3 of "Release to PyPI"
+  → Records that step as a success. Nothing is printed.
+```
+
+It is deliberately reluctant, because a wrong record is worse than none:
+
+- **One command credits one step, never the whole workflow.** A run of `twine upload` is evidence about uploading and about nothing else.
+- **It writes only when the command *is* the step.** The command has to cover at least half the step's words, and normally has to name the same tool. Sharing a single word is a coincidence, not a match.
+- **An unclear outcome records nothing.** No exit code, or an interrupted command, means silence. A non-empty `stderr` is not a failure: plenty of healthy tools write there.
+- **Heredoc bodies are ignored.** A `cat >> notes.md` whose text happens to mention `pip install` did not install anything.
+
+A workflow whose steps have been watched working then reads as `reliable` instead of `untested`, and the weakest watched step is the one that sets the number: a chain is exactly as trustworthy as the link most likely to break.
+
+<Note>
+Run outcomes are recorded in folder mode (`--memory ./memory`). The cloud endpoint records whole runs only, so writing a single command there would inflate the record the gate reads; a step-scoped write for the API is next.
+</Note>
 
 | Setting | Default | What it does |
 |---------|---------|--------------|
@@ -196,6 +218,16 @@ This adds 4 hooks to your Claude Code settings:
         "hooks": [{
           "type": "command",
           "command": "mengram auto-policy",
+          "timeout": 10
+        }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-outcome",
           "timeout": 10
         }]
       }
