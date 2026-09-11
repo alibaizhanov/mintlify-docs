@@ -1,7 +1,39 @@
 ---
 title: "Quickstart"
-description: "Get your API key and add your first memory in under 2 minutes."
+description: "Look at what memory would already know — no account. Then keep it, in under 2 minutes."
 ---
+
+## 0. See what it would know — no account needed
+
+Before anything else, look at what memory would already hold. This reads the
+Claude Code history on your own disk, uploads nothing, and needs no key:
+
+```bash
+pip install mengram-ai
+mengram try
+```
+
+```
+Scanned 23 sessions across 4 projects (2026-07-31 → 2026-09-11).
+
+If this were memory, your AI would already know:
+
+  Projects:   mengram (17), po-pilot (4), infra (1)
+  Your stack: railway, python, postgres, stripe, bun
+  Workflow patterns detected:
+    ⚙ debug from logs            (seen in 16 sessions)
+    ⚙ migrate → verify schema    (seen in 12 sessions)
+    ⚙ branch → PR → merge        (seen in 6 sessions)
+    ⚙ test → fix → re-test       (seen in 4 sessions)
+
+Right now, every new session starts from zero and relearns all of this.
+```
+
+Three seconds, and nothing to undo if you walk away. If the command is not
+found afterwards, your user-site bin is not on PATH:
+`export PATH="$(python3 -m site --user-base)/bin:$PATH"`.
+
+Like what you see? Keep it — the steps below take about two minutes.
 
 ## Fastest path — paste one prompt into your agent
 
