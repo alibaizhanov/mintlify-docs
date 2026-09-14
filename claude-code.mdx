@@ -148,6 +148,25 @@ Run outcomes are recorded in folder mode (`--memory ./memory`). The cloud endpoi
 | `MENGRAM_MEMORY_DIR` | unset | Read a memfmt folder instead of the cloud (no key, no network) |
 | `mengram hook install --no-policy` | — | Install the other three hooks without the gate |
 
+### 6. What it did — the receipt
+
+A hook that works is invisible. The recalled fact goes into the prompt, the gate's question looks like any other permission prompt, the recorded outcome is a number in a file nobody opens. So each hook leaves one line behind, and the next session opens with the sum:
+
+```
+🧠 Mengram, last session: recalled memories on 4 prompts · asked before 1 workflow
+   with a weak record · recorded 3 step outcomes (2 ok, 1 failed) · caught 1 failure
+   the host never reported
+```
+
+Shown once, at session start — never on a resume or after compaction, which are the same session continuing — and not at all when nothing happened. When the gate fires, Claude also says so in one line before it goes on (*"Mengram flagged this: 'deploy to Railway' is 43% reliable (2✓/3✗); last failure 2026-07-30: the pool was cold."*), so the moment is attributed to memory rather than passing as an ordinary prompt.
+
+```bash
+mengram receipt            # last session, and the past 7 days
+mengram receipt --days 30
+```
+
+The ledger is `~/.mengram/receipts.jsonl`, whichever mode the hooks run in. It is bounded and append-only; delete it to start over.
+
 ### Full Loop
 
 ```
@@ -160,9 +179,11 @@ Run outcomes are recorded in folder mode (`--memory ./memory`). The cloud endpoi
 │                                              │
 │  Claude responds (with memory context)       │
 │  ↓ PreToolUse → weak workflow? ask first     │
+│  ↓ PostToolUse → step outcome recorded       │
 │  ↓ Stop → conversation saved (background)    │
 │                                              │
 │  Next prompt → recall again...               │
+│  Next session → "last session: …" receipt    │
 └──────────────────────────────────────────────┘
 ```
 
