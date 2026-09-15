@@ -49,6 +49,7 @@
               "claude-connector",
               "claude-code",
               "managed-agents",
+              "openai-agents",
               "openclaw",
               "mcp-server",
               "vapi",
