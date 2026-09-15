@@ -410,7 +410,7 @@ When you hit your monthly plan limits, each hook surfaces a clear warning instea
 
 | Hook | What happens | Message shown |
 |------|-------------|---------------|
-| **Auto-recall** | Search quota exceeded | Claude sees: `[Mengram] Memory search quota exceeded — recall is disabled` |
+| **Auto-recall** | Not charged since 2.44.1 — a search the hooks make carries `X-Mengram-Source: hook` and skips the search quota (still rate-limited). Older CLIs: Claude sees `[Mengram] Memory search quota exceeded — recall is disabled` | `pip install -U mengram-ai` |
 | **Auto-context** | Profile load fails | Session start shows: `[Mengram] Memory profile load failed — quota exceeded` |
 | **Auto-save** | Save quota exceeded | Terminal shows: `[Mengram] Memory save failed — Your conversations are NOT being saved` |
 
