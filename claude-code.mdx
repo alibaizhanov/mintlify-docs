@@ -1,6 +1,6 @@
 ---
 title: "Claude Code Integration"
-description: "Memory that survives /clear and auto-compaction — auto-save conversations, auto-recall context on every prompt, load your profile on session start, and a policy gate that asks before Claude runs a workflow with a weak record."
+description: "Memory that survives /clear and auto-compaction — auto-save conversations, auto-recall context on every prompt, load your profile on session start, a policy gate that asks before Claude runs a workflow with a weak record, and a checkpoint that carries the working state through compaction. The same hooks run under Codex."
 ---
 
 ## Overview
@@ -11,8 +11,9 @@ Mengram integrates with [Claude Code](https://docs.anthropic.com/en/docs/claude-
 2. **Auto-recall** — searches relevant memories on every prompt and injects them as context
 3. **Auto-save** — captures conversations in the background to build up memory over time
 4. **Policy gate** — before a workflow-shaped Bash command runs, checks it against the workflows memory has learned; if the match has a weak record, Claude has to ask you first
+5. **Compaction checkpoint** — before the context is compacted, writes the working state down (last prompts, files edited, last commands, where Claude left off) and puts it back verbatim after; the host's summary can drop it, the checkpoint can't
 
-Zero manual effort. One command to install.
+Zero manual effort. One command to install. The same hooks install under [Codex](#codex-the-same-hooks) with one flag.
 
 ## Quick Setup
 
@@ -38,7 +39,11 @@ pip install mengram-ai
 mengram setup
 ```
 
-This creates your account (if needed), saves your API key, and installs all 4 hooks automatically. Restart Claude Code — done.
+This creates your account (if needed), saves your API key, and installs all six hooks automatically. Restart Claude Code — done.
+
+<Note>
+The compaction checkpoint (v2.44+) ships with the CLI hooks only. If you use the plugin, run `mengram hook install` as well — the two coexist.
+</Note>
 
 ## Skip the cold start — import your history
 
@@ -65,6 +70,8 @@ Session starts
 
 Claude now knows: your name, preferences, tech stack, current projects
 ```
+
+After a compaction or a `--resume`, the working state saved by the [checkpoint](#6-before-compaction-the-working-state) comes first, above the profile.
 
 ### 2. Every Prompt — Relevant Memories Recalled
 
@@ -148,14 +155,47 @@ Run outcomes are recorded in folder mode (`--memory ./memory`). The cloud endpoi
 | `MENGRAM_MEMORY_DIR` | unset | Read a memfmt folder instead of the cloud (no key, no network) |
 | `mengram hook install --no-policy` | — | Install the other three hooks without the gate |
 
-### 6. What it did — the receipt
+### 6. Before compaction — the working state
+
+A compaction keeps the conversation but not the work. The host writes a summary for itself, and what the summary drops is invisible from inside the session: which files were just edited, what you asked three prompts ago, where Claude left off. Claude carries on from the summary as if nothing were missing — and edits a file from a stale idea of it, or does a finished step twice.
+
+The `PreCompact` hook fires before the summary is written, with the transcript path in hand:
+
+```
+Context is about to be compacted (auto or /compact)
+  → mengram auto-checkpoint runs
+  → Reads the transcript's tail and keeps what locates the work:
+      the last 4 prompts · files edited · last 8 commands · the last thing Claude said
+  → Writes ~/.mengram/checkpoints/<session_id>.json   (never uploaded)
+
+Compaction happens; the session continues
+  → SessionStart fires with source: compact
+  → mengram auto-context finds the checkpoint and puts it back, verbatim:
+
+  [Mengram — working state saved before compaction (2 min ago; the host's summary may have dropped some of this)]
+  Directory: /Users/you/app
+  Last things the user asked, oldest first:
+    - Add a PreCompact hook to the CLI
+    - Also cover Codex
+  Files edited this session (re-read before editing again):
+    - /Users/you/app/cli.py
+    - /Users/you/app/local/checkpoint.py
+  Last commands run:
+    $ pytest -q tests/test_checkpoint.py
+  Where the assistant left off:
+    Tests written; running them now.
+```
+
+Nothing is extracted or rewritten: the value is that the record is exact. It is restored **once** — the file is consumed, so a later `/clear` in the same session does not replay old work — and it is restored with or without an account, and through a cloud outage, because it never left the machine. A `--resume` whose session id changed finds the newest checkpoint written from the same directory (up to 7 days old). A fresh `startup` or `/clear` never sees one.
+
+### 7. What it did — the receipt
 
 A hook that works is invisible. The recalled fact goes into the prompt, the gate's question looks like any other permission prompt, the recorded outcome is a number in a file nobody opens. So each hook leaves one line behind, and the next session opens with the sum:
 
 ```
 🧠 Mengram, last session: recalled memories on 4 prompts · asked before 1 workflow
    with a weak record · recorded 3 step outcomes (2 ok, 1 failed) · caught 1 failure
-   the host never reported
+   the host never reported · restored the working state after 1 compaction
 ```
 
 Shown once, at session start — never on a resume or after compaction, which are the same session continuing — and not at all when nothing happened. When the gate fires, Claude also says so in one line before it goes on (*"Mengram flagged this: 'deploy to Railway' is 43% reliable (2✓/3✗); last failure 2026-07-30: the pool was cold."*), so the moment is attributed to memory rather than passing as an ordinary prompt.
@@ -182,25 +222,49 @@ The ledger is `~/.mengram/receipts.jsonl`, whichever mode the hooks run in. It i
 │  ↓ PostToolUse → step outcome recorded       │
 │  ↓ Stop → conversation saved (background)    │
 │                                              │
+│  Context fills up                            │
+│  ↓ PreCompact → working state written down   │
+│  ↓ SessionStart (compact) → put back, exact  │
+│                                              │
 │  Next prompt → recall again...               │
 │  Next session → "last session: …" receipt    │
 └──────────────────────────────────────────────┘
 ```
 
+## Codex — the same hooks
+
+Codex fires the same lifecycle events (`SessionStart`, `UserPromptSubmit`, `PreCompact`, …) and its hooks file has the same shape as Claude Code's, so the handlers are shared — one memory across both tools, and a working state that survives compaction in either.
+
+```bash
+pip install mengram-ai
+mengram hook install --codex
+```
+
+This writes `~/.codex/hooks.json` (merged if it already exists; nothing else in `~/.codex` is touched):
+
+| Event | Command | What it does |
+|---|---|---|
+| `SessionStart` | `mengram auto-context` | Loads your profile; after a compact or resume, the working state first |
+| `UserPromptSubmit` | `mengram auto-recall` | Relevant memories on each prompt |
+| `PreCompact` | `mengram auto-checkpoint --host codex` | Writes the working state down before compaction |
+
+Auto-save and the policy gate are not installed under Codex yet. `mengram hook uninstall` removes the hooks from both Claude Code and Codex. Restart Codex after installing.
+
 ## Commands
 
 ### mengram hook install
 
-Installs all 4 hooks into `~/.claude/settings.json`.
+Installs all six hooks into `~/.claude/settings.json`.
 
 ```bash
 mengram hook install                    # default: save every 3rd response
 mengram hook install --every 5          # save every 5th response
 mengram hook install --user-id myuser   # custom user_id
 mengram hook install --no-policy        # skip the policy gate
+mengram hook install --codex            # Codex instead: ~/.codex/hooks.json
 ```
 
-This adds 4 hooks to your Claude Code settings:
+This adds the hooks to your Claude Code settings:
 
 ```json
 {
@@ -252,6 +316,15 @@ This adds 4 hooks to your Claude Code settings:
           "timeout": 10
         }]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "mengram auto-checkpoint",
+          "timeout": 10
+        }]
+      }
     ]
   }
 }
@@ -274,6 +347,9 @@ Mengram Hooks
   Auto-recall:    installed
   Session context: installed
   Policy gate:    installed
+  Run outcomes:   installed
+  Checkpoint:     installed
+  Codex:          installed (/Users/you/.codex/hooks.json)
   API Key:        om-...Kb8 (set)
   API:            connected (free plan)
   Settings:       /Users/you/.claude/settings.json
@@ -281,7 +357,7 @@ Mengram Hooks
 
 ### mengram hook uninstall
 
-Remove all Mengram hooks.
+Remove all Mengram hooks — from Claude Code and, if installed there, from Codex.
 
 ```bash
 mengram hook uninstall
@@ -317,6 +393,11 @@ mengram hook uninstall
 - Slash commands (`/help`, `/clear`, etc.)
 - Simple confirmations (`yes`, `no`, `ok`)
 
+**Checkpoint** skips:
+- A compaction with no transcript on disk, or a transcript with nothing to keep
+- A `startup` or `/clear` — the checkpoint is only offered after `compact` or `resume`
+- Anything older than 7 days when a resumed session has a new id
+
 **Policy gate** skips:
 - Any tool other than `Bash`
 - Commands that are not workflow-shaped (`ls`, `cat`, `grep`, `python -c …`) — no lookup, no cost
@@ -349,7 +430,7 @@ To check your current usage: `mengram stats` or visit [mengram.io/dashboard](htt
 
 **Hooks not firing?**
 - Restart Claude Code after installing
-- Check `mengram hook status` to verify all 4 hooks are installed
+- Check `mengram hook status` to verify the hooks are installed
 - Keys are read from `MENGRAM_API_KEY` env **or** `~/.mengram/config.json` (env wins) — check `cat ~/.mengram/config.json`
 
 **Memories not appearing?**

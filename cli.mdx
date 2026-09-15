@@ -124,13 +124,14 @@ mengram rules --force                  # regenerate (bypass cache)
 
 ### mengram hook
 
-Manage Claude Code memory hooks (auto-save + auto-recall + session context). See [Claude Code Integration](/claude-code) for details.
+Manage the memory hooks — session context, auto-recall, auto-save, policy gate, run outcomes, and the compaction checkpoint. See [Claude Code Integration](/claude-code) for details.
 
 ```bash
-mengram hook install              # install all 3 hooks
+mengram hook install              # Claude Code: install all six hooks
 mengram hook install --every 5    # save every 5th response
-mengram hook status               # check hook status
-mengram hook uninstall            # remove hook
+mengram hook install --codex      # Codex: the same hooks in ~/.codex/hooks.json
+mengram hook status               # check hook status (both tools)
+mengram hook uninstall            # remove the hooks from both
 ```
 
 ### mengram try
