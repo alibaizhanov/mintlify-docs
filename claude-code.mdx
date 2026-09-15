@@ -250,6 +250,23 @@ This writes `~/.codex/hooks.json` (merged if it already exists; nothing else in 
 
 Auto-save and the policy gate are not installed under Codex yet. `mengram hook uninstall` removes the hooks from both Claude Code and Codex. Restart Codex after installing.
 
+## Cursor — the same hooks, one door fewer
+
+Cursor has lifecycle hooks too (`~/.cursor/hooks.json`, flat `{"version": 1, "hooks": {event: [{command, timeout}]}}`). A hook may answer `{"additional_context": ...}` on `sessionStart` and `postToolUse`; `beforeSubmitPrompt` can only allow or block, so there is no per-prompt recall — mid-conversation, recall in Cursor is on request via the MCP tools.
+
+```bash
+mengram hook install --cursor
+```
+
+| Event | What it does |
+|---|---|
+| `sessionStart` | Loads your profile, plus the newest working state saved in this workspace within the last day |
+| `preCompact` | Writes the working state down before Cursor summarises the context |
+| `postToolUse` | Puts it back on the first tool call after compaction — Cursor opens no new session, so this is the door |
+| `afterAgentResponse` | Saves the agent's answer to memory |
+
+`mengram setup` finds Cursor on the machine and installs these on its own. Restart Cursor after installing. Cursor's transcript format is not documented; the checkpoint reader accepts plain `{"role", "content"}` lines and says "nothing to keep" rather than guess.
+
 ## Commands
 
 ### mengram hook install

@@ -49,7 +49,7 @@ The install guide is plain text at [`https://mengram.io/agent-install.txt`](http
 |---|---|---|
 | **Claude Desktop** (`.app`) | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) | Local stdio MCP — lowest latency, no Node.js |
 | **Claude Code** (CLI) | `claude mcp add mengram -- mengram server --cloud` | Native MCP support; `mengram hook install` adds the hooks (recall, save, policy gate, compaction checkpoint) |
-| **Cursor** | `~/.cursor/mcp.json` | Same JSON shape as Claude Desktop |
+| **Cursor** | `~/.cursor/mcp.json` | Same JSON shape as Claude Desktop; `mengram hook install --cursor` adds the hooks in `~/.cursor/hooks.json` |
 | **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | Same JSON shape |
 | **Codex** (CLI) | `~/.codex/config.toml` | TOML format; `mengram hook install --codex` adds the same hooks in `~/.codex/hooks.json` |
 | **Claude.ai web / Chrome** | Settings → Connectors → Add custom connector | HTTP MCP via UI — agent can't install programmatically, gives instructions |
