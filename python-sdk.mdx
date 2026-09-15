@@ -119,6 +119,12 @@ for r in results:
 | `run_id` | str | None | Filter by run |
 | `app_id` | str | None | Filter by app |
 | `filters` | dict | None | Metadata filters |
+| `max_tokens` | int | None | Room the reply may take (estimated tokens). Cut in rank order to fit; `client.last_budget` holds the report of what was left out. |
+
+```python
+results = m.search("what does this customer prefer?", user_id="cust_1042", max_tokens=600)
+print(m.last_budget)   # {"max_tokens": 600, "used_tokens": 512, "kept": {...}, "dropped": {...}}
+```
 
 ### search_all(query, ...)
 

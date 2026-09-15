@@ -170,14 +170,36 @@ Semantic search across the knowledge graph with LLM re-ranking.
 | `run_id` | string | null | Filter by run |
 | `app_id` | string | null | Filter by app |
 | `filters` | object | null | Metadata key-value filters (JSONB containment) |
+| `max_tokens` | int | null | Room the reply may take, in estimated tokens (50–50,000). Results are cut in rank order to fit — entity by entity, fact by fact — and the response adds a `budget` report. |
+
+**A recall that fits.** With `max_tokens`, the response carries what was cut, so the cut is never silent:
+
+```json
+{"query": "what does this customer prefer?", "user_id": "cust_1042", "limit": 5, "max_tokens": 600}
+```
+
+```json
+{
+  "results": [...],
+  "budget": {
+    "max_tokens": 600, "used_tokens": 512, "method": "estimate",
+    "kept":    {"entities": 3, "facts": 14},
+    "dropped": {"entities": 2, "facts": 9, "relations": 1, "knowledge": 2}
+  }
+}
+```
+
+Tokens are estimated (about four characters per token for Latin text, fewer for other scripts) — the server does not know which model reads the reply. Budget around 15% under your real limit.
 
 ### POST /v1/search/all
 
 Unified search across all 3 memory types.
 
 ```json
-{"query": "deployment", "user_id": "default", "limit": 5}
+{"query": "deployment", "user_id": "default", "limit": 5, "max_tokens": 800}
 ```
+
+`max_tokens` works here too: one budget across the sections, spent in the order a task needs them — facts about the entities, then what happened, then how it was done, then raw conversation last. The `budget` report also counts `episodes`, `procedures` and `chunks`.
 
 Response:
 

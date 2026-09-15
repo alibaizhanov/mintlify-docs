@@ -207,7 +207,7 @@ The cloud MCP server exposes **29 tools**:
 | Tool | Description |
 |------|-------------|
 | `checkpoint` | Save a session checkpoint — summarize key decisions, learnings, and outcomes. Lighter than "remember": takes a structured summary instead of raw messages. |
-| `context_for` | Get relevant memory context for a specific task. Returns a compact context pack: related entities, procedures, and past events. |
+| `context_for` | Get relevant memory context for a specific task. Returns a compact context pack: related entities, procedures, and past events. Takes `max_tokens` (default 1200): the pack is cut in rank order to fit and ends with one line naming what was left out. |
 | `generate_rules_file` | Generate a CLAUDE.md, .cursorrules, or .windsurfrules file from memory. Creates structured project rules, conventions, tech stack, workflows. |
 
 ## Multi-User / Multi-Tenant
