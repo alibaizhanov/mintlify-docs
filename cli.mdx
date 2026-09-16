@@ -137,7 +137,9 @@ mengram hook uninstall            # remove the hooks from both
 
 ### mengram resume
 
-Where the task in this repository stands. The hooks write a task card when an agent stops — keyed by `git remote` + branch, so another session, another agent in another worktree or another machine finds it — and inject it at the next session start, saying whether the code has moved since the last check.
+Where the task in this repository stands. The hooks (Claude Code, Codex, Cursor) write a task card when an agent stops — keyed by `git remote` + branch, so another session, another agent in another worktree of that branch or another machine finds it — and inject it at the next session start, saying whether the code has moved since the last check.
+
+A session on a branch with no card of its own — a fresh Orca worktree, say — gets one line saying which cards exist, not another branch's task, which is usually another agent's. The agent's draft of the task carries over only to the session that continues it; a task you confirmed carries over to any.
 
 ```bash
 mengram resume            # print the card: task, done, remaining, last check + commit, files, sources

@@ -242,15 +242,16 @@ pip install mengram-ai
 mengram hook install --codex
 ```
 
-This writes `~/.codex/hooks.json` (merged if it already exists; nothing else in `~/.codex` is touched):
+This writes `~/.codex/hooks.json` (merged if it already exists; nothing else in `~/.codex` is touched — inside Orca too, which rebuilds its own Codex home from that file):
 
 | Event | Command | What it does |
 |---|---|---|
 | `SessionStart` | `mengram auto-context` | Loads your profile; after a compact or resume, the working state first |
 | `UserPromptSubmit` | `mengram auto-recall` | Relevant memories on each prompt |
 | `PreCompact` | `mengram auto-checkpoint --host codex` | Writes the working state down before compaction |
+| `Stop` | `mengram auto-save --every 3 --host codex` | Saves the turn and writes the [task card](/cli#mengram-resume), so Claude Code can pick up a task Codex started (2.48.0+) |
 
-Auto-save and the policy gate are not installed under Codex yet. `mengram hook uninstall` removes the hooks from both Claude Code and Codex. Restart Codex after installing.
+The policy gate is not installed under Codex yet. Installed before 2.48.0? Run `mengram hook install --codex` again to add the Stop hook; Codex asks you to trust it. `mengram hook uninstall` removes the hooks from both Claude Code and Codex. Restart Codex after installing.
 
 ## Cursor — the same hooks, one door fewer
 
