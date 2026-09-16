@@ -135,6 +135,19 @@ mengram hook status               # check hook status (both tools)
 mengram hook uninstall            # remove the hooks from both
 ```
 
+### mengram resume
+
+Where the task in this repository stands. The hooks write a task card when an agent stops — keyed by `git remote` + branch, so another session, another agent in another worktree or another machine finds it — and inject it at the next session start, saying whether the code has moved since the last check.
+
+```bash
+mengram resume            # print the card: task, done, remaining, last check + commit, files, sources
+mengram resume --open     # local page: confirm or correct the card, pick another task, copy the context
+mengram resume --json     # the card as JSON
+mengram resume --any-age  # show it however old (default: last 14 days)
+```
+
+Task / done / remaining are drafted by one model call and marked as the agent's draft until you confirm them on the page; confirmed text is never redrafted. Files, commands, the last test result and the commit it ran on are recorded verbatim. Cards live in `~/.mengram/resume/` and need no account; only the draft uses a model.
+
 ### mengram try
 
 Zero-account, local-only preview of what Mengram memory would know. Scans your Claude Code history **on-device** — nothing is uploaded, no API key needed:
