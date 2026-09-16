@@ -201,6 +201,8 @@ Unified search across all 3 memory types.
 
 `max_tokens` works here too: one budget across the sections, spent in the order a task needs them — facts about the entities, then what happened, then how it was done, then raw conversation last. The `budget` report also counts `episodes`, `procedures` and `chunks`.
 
+`chunks` (default `1`, `0` to `10`) is how many raw conversation chunks may come back as the fallback for facts extraction missed. One is the default because on a 90-day history five of them were three quarters of the tokens handed to the model while one kept recall of old facts unchanged; `0` turns the fallback off.
+
 Response:
 
 ```json
