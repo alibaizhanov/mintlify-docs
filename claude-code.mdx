@@ -85,12 +85,14 @@ You type: "how did we deploy to Railway?"
 
   [Mengram Memory — relevant context from past sessions]
   Railway Deployment:
-    - Auto-deploys from main branch
-    - Uses gunicorn with 1 worker
-    - DATABASE_URL uses Session Mode port 5432
+    - Auto-deploys from main branch  (claude-code, 2026-09-02)
+    - Uses gunicorn with 1 worker  (codex, 2026-09-11)
+    - DATABASE_URL uses Session Mode port 5432  (claude-code, 2026-09-02)
 
 Claude responds WITH context from your past sessions
 ```
+
+The tag after each fact says which tool wrote it and when (since 2.46.0). The hook also tells the server which OS and tool it runs under, so a workspace path recorded on your Mac never reaches a session on a Linux box, and a Cursor settings fact never reaches Claude Code — the server leaves those out and counts them in `facts_left_out_for_host`.
 
 ### 3. After Response — Conversation Saved
 

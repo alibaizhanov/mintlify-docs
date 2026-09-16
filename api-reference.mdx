@@ -191,6 +191,24 @@ Semantic search across the knowledge graph with LLM re-ranking.
 
 Tokens are estimated (about four characters per token for Latin text, fewer for other scripts) — the server does not know which model reads the reply. Budget around 15% under your real limit.
 
+**Where each fact came from.** Every result carries `facts_meta`, one entry per fact, aligned with `facts`:
+
+```json
+{
+  "entity": "app", "type": "project", "score": 0.91,
+  "facts": ["deploys to Fly.io from main", "uses PostgreSQL 16"],
+  "facts_meta": [
+    {"source": "codex", "os": "linux", "cwd": "/home/ali/app", "session": "s-41",
+     "when": "2026-09-15", "recalled": 3, "last_recalled": "2026-09-16"},
+    {"source": "api", "when": "2026-09-10", "recalled": 0}
+  ]
+}
+```
+
+`source` is what the writer declared on `/v1/add` (`source` and `metadata`); the CLI hooks send `claude-code`, `codex` or `cursor` with the session, working directory and OS, the MCP server sends `mcp`, everything else is `api`. `recalled` and `last_recalled` count retrievals, so a fact nobody has asked for in months is visible as such. Facts are never rewritten; the tag the hooks show (`(codex, 2026-09-15)`) is built from this at read time.
+
+**A host does not inherit another host's paths.** Send `X-Mengram-Host: <os>/<tool>` (for example `linux/claude-code`; the hooks do) and facts tied to another machine or tool are left out: a `/Users/...` path recorded on a Mac, a `~/.cursor/hooks.json` fact recorded from Cursor. Each result then says how many were withheld in `facts_left_out_for_host`. Without the header nothing is filtered, and facts saved without provenance are never filtered. From Python: `CloudMemory(api_key, host="linux/claude-code")`.
+
 ### POST /v1/search/all
 
 Unified search across all 3 memory types.
